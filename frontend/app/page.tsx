@@ -14,6 +14,8 @@ export default function Home() {
     connected: false,
     aiAvailable: false,
   });
+  const [customGoal, setCustomGoal] = useState("");
+  const [showCustomInput, setShowCustomInput] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -42,7 +44,16 @@ export default function Home() {
   }, []);
 
   const handleStart = () => {
-    router.push(`/onboarding?goal=${encodeURIComponent(selectedGoal)}`);
+    const goal = customGoal.trim() || selectedGoal;
+    const isCustom = customGoal.trim() ? "true" : "false";
+    router.push(`/onboarding?goal=${encodeURIComponent(goal)}&custom=${isCustom}`);
+  };
+
+  const handleAddCustomGoal = () => {
+    if (customGoal.trim()) {
+      setSelectedGoal(customGoal.trim());
+      setShowCustomInput(false);
+    }
   };
 
   return (
@@ -100,9 +111,13 @@ export default function Home() {
                 {goals.map((goal) => (
                   <button
                     key={goal}
-                    onClick={() => setSelectedGoal(goal)}
+                    onClick={() => {
+                      setSelectedGoal(goal);
+                      setCustomGoal("");
+                      setShowCustomInput(false);
+                    }}
                     className={`px-6 py-3 rounded-xl border-2 transition-all ${
-                      selectedGoal === goal
+                      selectedGoal === goal && !customGoal
                         ? "border-[var(--accent)] bg-[var(--accent-muted)] text-[var(--accent)]"
                         : "border-[var(--border-primary)] hover:border-[var(--border-secondary)] text-[var(--text-secondary)]"
                     }`}
@@ -110,6 +125,48 @@ export default function Home() {
                     {goal}
                   </button>
                 ))}
+
+                {/* Custom Goal Button */}
+                {!showCustomInput ? (
+                  <button
+                    onClick={() => setShowCustomInput(true)}
+                    className={`px-6 py-3 rounded-xl border-2 border-dashed transition-all ${
+                      customGoal
+                        ? "border-[var(--accent)] bg-[var(--accent-muted)] text-[var(--accent)]"
+                        : "border-[var(--border-primary)] hover:border-[var(--accent)] text-[var(--text-muted)]"
+                    }`}
+                  >
+                    {customGoal || "+ Custom"}
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={customGoal}
+                      onChange={(e) => setCustomGoal(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAddCustomGoal()}
+                      placeholder="e.g. Game Developer"
+                      autoFocus
+                      className="px-4 py-3 rounded-xl border-2 border-[var(--accent)] bg-[var(--bg-secondary)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none w-48"
+                    />
+                    <button
+                      onClick={handleAddCustomGoal}
+                      disabled={!customGoal.trim()}
+                      className="w-12 h-12 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold text-xl transition"
+                    >
+                      +
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowCustomInput(false);
+                        setCustomGoal("");
+                      }}
+                      className="w-12 h-12 rounded-xl border-2 border-[var(--border-primary)] hover:border-[var(--error)] text-[var(--text-muted)] hover:text-[var(--error)] transition"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
@@ -125,10 +182,10 @@ export default function Home() {
           {goals.length > 0 && (
             <button
               onClick={handleStart}
-              disabled={!selectedGoal}
+              disabled={!selectedGoal && !customGoal.trim()}
               className="px-8 py-4 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-semibold text-lg text-white transition-all transform hover:scale-105"
             >
-              Start My Journey →
+              {customGoal.trim() ? `Start as ${customGoal.trim()} →` : "Start My Journey →"}
             </button>
           )}
 
