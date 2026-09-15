@@ -232,3 +232,106 @@ export function clearLearnerId(): void {
     localStorage.removeItem("pathpilot_learner_id");
   }
 }
+
+// =============================================================================
+// MENTOR REVIEW SYSTEM
+// =============================================================================
+
+export interface Mentor {
+  id: string;
+  name: string;
+  title: string;
+  company: string;
+  industry: string;
+  expertise: string[];
+  location: string;
+  linkedinUrl?: string;
+  isAvailable: boolean;
+  reviewsCompleted: number;
+}
+
+export interface MentorReview {
+  id: string;
+  status: "PENDING" | "IN_REVIEW" | "APPROVED" | "NEEDS_CHANGES" | "REJECTED";
+  submittedAt: string;
+  reviewedAt?: string;
+  mentor: {
+    id: string;
+    name: string;
+    title: string;
+    company?: string;
+    location?: string;
+  } | null;
+  feedback?: {
+    overallRating: 1 | 2 | 3 | 4 | 5;
+    isPathAppropriate: boolean;
+    suggestedChanges?: string[];
+    additionalSkills?: string[];
+    skipSkills?: string[];
+    mentorNotes: string;
+    encouragement: string;
+  };
+}
+
+export interface WorkOpportunity {
+  id: string;
+  title: string;
+  category: string;
+  requiredSkills: string[];
+  location: "Bhopal" | "Indore" | "Remote" | "Hybrid";
+  type: "Full-time" | "Part-time" | "Freelance" | "Internship";
+  salaryRange?: string;
+  description: string;
+}
+
+// Get available mentors
+export async function getMentors(goal?: string): Promise<Mentor[]> {
+  const endpoint = goal ? `/mentors?goal=${encodeURIComponent(goal)}` : "/mentors";
+  return apiCall(endpoint);
+}
+
+// Get mentor by ID
+export async function getMentor(mentorId: string): Promise<Mentor> {
+  return apiCall(`/mentors/${mentorId}`);
+}
+
+// Submit roadmap for mentor review
+export async function submitForReview(input: {
+  learnerId: string;
+  goal: string;
+  skills: string[];
+  currentSkills?: string[];
+  estimatedWeeks?: number;
+  preferredMentorId?: string;
+}): Promise<{ reviewId: string; status: string; mentor: Mentor | null; submittedAt: string }> {
+  return apiCall("/review/submit", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+// Get review status
+export async function getReviewStatus(reviewId: string): Promise<MentorReview> {
+  return apiCall(`/review/${reviewId}`);
+}
+
+// Get all reviews for a learner
+export async function getLearnerReviews(learnerId: string): Promise<MentorReview[]> {
+  return apiCall(`/learner/${learnerId}/reviews`);
+}
+
+// Simulate mentor review (for demo)
+export async function simulateReview(reviewId: string): Promise<MentorReview> {
+  return apiCall(`/review/${reviewId}/simulate`, {
+    method: "POST",
+  });
+}
+
+// Get work opportunities
+export async function getWorkOpportunities(goal?: string, location?: string): Promise<WorkOpportunity[]> {
+  const params = new URLSearchParams();
+  if (goal) params.append("goal", goal);
+  if (location) params.append("location", location);
+  const queryString = params.toString();
+  return apiCall(`/opportunities${queryString ? `?${queryString}` : ""}`);
+}

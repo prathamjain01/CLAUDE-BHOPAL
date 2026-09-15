@@ -9,9 +9,17 @@ import {
   updateCheckpoint,
   getNextMove,
   clearLearnerId,
+  getMentors,
+  submitForReview,
+  getReviewStatus,
+  simulateReview,
+  getWorkOpportunities,
   type LearnerState,
   type ProgressResponse,
   type NextMoveResponse,
+  type Mentor,
+  type MentorReview,
+  type WorkOpportunity,
 } from "@/lib/api/apiClient";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -32,6 +40,17 @@ export default function PathwayPage() {
     encouragement: string;
   } | null>(null);
   const [updating, setUpdating] = useState(false);
+
+  // Mentor Review State
+  const [showMentorReview, setShowMentorReview] = useState(false);
+  const [mentors, setMentors] = useState<Mentor[]>([]);
+  const [selectedMentor, setSelectedMentor] = useState<string | null>(null);
+  const [reviewStatus, setReviewStatus] = useState<MentorReview | null>(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
+
+  // Work Opportunities State
+  const [showOpportunities, setShowOpportunities] = useState(false);
+  const [opportunities, setOpportunities] = useState<WorkOpportunity[]>([]);
 
   useEffect(() => {
     const learnerId = getStoredLearnerId();
@@ -102,6 +121,78 @@ export default function PathwayPage() {
   const handleReset = () => {
     clearLearnerId();
     router.push("/");
+  };
+
+  // Load mentors for the goal
+  const loadMentors = async () => {
+    if (!learnerState) return;
+    try {
+      const m = await getMentors(learnerState.goal);
+      setMentors(m);
+    } catch {
+      console.error("Failed to load mentors");
+    }
+  };
+
+  // Load work opportunities
+  const loadOpportunities = async () => {
+    if (!learnerState) return;
+    try {
+      const opps = await getWorkOpportunities(learnerState.goal);
+      setOpportunities(opps);
+    } catch {
+      console.error("Failed to load opportunities");
+    }
+  };
+
+  // Submit roadmap for mentor review
+  const handleSubmitForReview = async () => {
+    const learnerId = getStoredLearnerId();
+    if (!learnerId || !learnerState || !nextMove) return;
+
+    setReviewLoading(true);
+    try {
+      const result = await submitForReview({
+        learnerId,
+        goal: learnerState.goal,
+        skills: nextMove.skillGap?.totalRequired
+          ? Array.from({ length: nextMove.skillGap.totalRequired }, (_, i) => `skill-${i}`)
+          : [],
+        currentSkills: learnerState.currentSkills,
+        estimatedWeeks: Math.ceil((nextMove.skillGap?.stillNeed || 0) * 2 / 7),
+        preferredMentorId: selectedMentor || undefined,
+      });
+
+      // Immediately fetch review status
+      const status = await getReviewStatus(result.reviewId);
+      setReviewStatus(status);
+
+      // Simulate mentor review (for demo)
+      setTimeout(async () => {
+        try {
+          const simulated = await simulateReview(result.reviewId);
+          setReviewStatus(simulated);
+        } catch {
+          console.error("Failed to simulate review");
+        }
+      }, 2000);
+    } catch {
+      setError("Failed to submit for review");
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
+  // Open mentor review modal
+  const openMentorReview = async () => {
+    await loadMentors();
+    setShowMentorReview(true);
+  };
+
+  // Open opportunities modal
+  const openOpportunities = async () => {
+    await loadOpportunities();
+    setShowOpportunities(true);
   };
 
   if (loading) {
@@ -455,7 +546,7 @@ export default function PathwayPage() {
 
             {/* Completed Skills */}
             {progress && progress.completedList.length > 0 && (
-              <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-primary)] p-6">
+              <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-primary)] p-6 mb-6">
                 <h3 className="font-semibold mb-4">Skills Completed</h3>
                 <div className="flex flex-wrap gap-2">
                   {progress.completedList.map((skill, i) => (
@@ -469,6 +560,85 @@ export default function PathwayPage() {
                 </div>
               </div>
             )}
+
+            {/* Mentor Review & Opportunities Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              {/* Mentor Review Card */}
+              <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-primary)] p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                    <span className="text-xl">👨‍🏫</span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Mentor Review</h3>
+                    <p className="text-xs text-[var(--text-muted)]">Get expert feedback on your roadmap</p>
+                  </div>
+                </div>
+
+                {reviewStatus ? (
+                  <div className="space-y-3">
+                    <div className={`px-3 py-2 rounded-lg text-sm font-medium ${
+                      reviewStatus.status === "APPROVED"
+                        ? "bg-green-500/10 text-green-500"
+                        : reviewStatus.status === "PENDING"
+                        ? "bg-yellow-500/10 text-yellow-500"
+                        : "bg-blue-500/10 text-blue-500"
+                    }`}>
+                      Status: {reviewStatus.status}
+                    </div>
+                    {reviewStatus.mentor && (
+                      <p className="text-sm text-[var(--text-secondary)]">
+                        Reviewer: <span className="font-medium">{reviewStatus.mentor.name}</span>
+                        <br />
+                        <span className="text-xs text-[var(--text-muted)]">{reviewStatus.mentor.title}</span>
+                      </p>
+                    )}
+                    {reviewStatus.feedback && (
+                      <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 space-y-2">
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <span
+                              key={star}
+                              className={star <= reviewStatus.feedback!.overallRating ? "text-yellow-400" : "text-gray-600"}
+                            >
+                              ★
+                            </span>
+                          ))}
+                        </div>
+                        <p className="text-sm text-[var(--text-secondary)]">{reviewStatus.feedback.mentorNotes}</p>
+                        <p className="text-sm text-[var(--accent)] italic">{reviewStatus.feedback.encouragement}</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={openMentorReview}
+                    className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-medium transition"
+                  >
+                    Request Mentor Review
+                  </button>
+                )}
+              </div>
+
+              {/* Work Opportunities Card */}
+              <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-primary)] p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
+                    <span className="text-xl">💼</span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Work Opportunities</h3>
+                    <p className="text-xs text-[var(--text-muted)]">Local & remote jobs for your skills</p>
+                  </div>
+                </div>
+                <button
+                  onClick={openOpportunities}
+                  className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-medium transition"
+                >
+                  View Opportunities
+                </button>
+              </div>
+            </div>
           </>
         ) : null}
       </main>
@@ -502,6 +672,147 @@ export default function PathwayPage() {
                 {updating ? "Getting help..." : "Get Help"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mentor Review Modal */}
+      {showMentorReview && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="bg-[var(--bg-card)] rounded-2xl p-6 max-w-lg w-full border border-[var(--border-primary)] max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold">Get Mentor Review</h3>
+              <button
+                onClick={() => setShowMentorReview(false)}
+                className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-sm text-[var(--text-secondary)] mb-6">
+              An industry professional will review your learning roadmap and provide personalized feedback.
+            </p>
+
+            {mentors.length > 0 ? (
+              <>
+                <h4 className="font-medium mb-3">Select a Mentor (Optional)</h4>
+                <div className="space-y-3 mb-6">
+                  {mentors.map((mentor) => (
+                    <div
+                      key={mentor.id}
+                      onClick={() => setSelectedMentor(selectedMentor === mentor.id ? null : mentor.id)}
+                      className={`p-4 rounded-xl border cursor-pointer transition ${
+                        selectedMentor === mentor.id
+                          ? "border-[var(--accent)] bg-[var(--accent-muted)]"
+                          : "border-[var(--border-primary)] hover:border-[var(--accent)]"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h5 className="font-medium">{mentor.name}</h5>
+                          <p className="text-sm text-[var(--text-muted)]">{mentor.title}</p>
+                          <p className="text-xs text-[var(--text-muted)]">{mentor.company} • {mentor.location}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs text-[var(--text-muted)]">{mentor.reviewsCompleted} reviews</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {mentor.expertise.slice(0, 3).map((skill) => (
+                          <span
+                            key={skill}
+                            className="px-2 py-0.5 bg-[var(--bg-tertiary)] rounded text-xs text-[var(--text-muted)]"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-[var(--text-muted)] mb-6">Loading mentors...</p>
+            )}
+
+            <button
+              onClick={handleSubmitForReview}
+              disabled={reviewLoading}
+              className="w-full py-4 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white rounded-xl font-semibold transition"
+            >
+              {reviewLoading ? "Submitting..." : "Submit for Review"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Work Opportunities Modal */}
+      {showOpportunities && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="bg-[var(--bg-card)] rounded-2xl p-6 max-w-2xl w-full border border-[var(--border-primary)] max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold">Work Opportunities</h3>
+              <button
+                onClick={() => setShowOpportunities(false)}
+                className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-sm text-[var(--text-secondary)] mb-6">
+              Jobs and opportunities matching your {learnerState?.goal} skills in Bhopal, Indore, and remote.
+            </p>
+
+            {opportunities.length > 0 ? (
+              <div className="space-y-4">
+                {opportunities.map((opp) => (
+                  <div
+                    key={opp.id}
+                    className="p-4 rounded-xl border border-[var(--border-primary)] hover:border-[var(--accent)] transition"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <h5 className="font-medium">{opp.title}</h5>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            opp.location === "Remote"
+                              ? "bg-purple-500/10 text-purple-500"
+                              : opp.location === "Bhopal"
+                              ? "bg-blue-500/10 text-blue-500"
+                              : opp.location === "Indore"
+                              ? "bg-green-500/10 text-green-500"
+                              : "bg-yellow-500/10 text-yellow-500"
+                          }`}>
+                            {opp.location}
+                          </span>
+                          <span className="px-2 py-0.5 bg-[var(--bg-tertiary)] rounded text-xs text-[var(--text-muted)]">
+                            {opp.type}
+                          </span>
+                        </div>
+                      </div>
+                      {opp.salaryRange && (
+                        <span className="text-sm font-medium text-green-500">{opp.salaryRange}</span>
+                      )}
+                    </div>
+                    <p className="text-sm text-[var(--text-secondary)] mb-3">{opp.description}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {opp.requiredSkills.map((skill) => (
+                        <span
+                          key={skill}
+                          className="px-2 py-0.5 bg-[var(--bg-tertiary)] rounded text-xs text-[var(--text-muted)]"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-[var(--text-muted)]">Loading opportunities...</p>
+            )}
           </div>
         </div>
       )}

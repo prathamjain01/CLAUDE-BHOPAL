@@ -293,4 +293,223 @@ router.post("/learner/:id/replan", async (req: Request, res: Response) => {
   }
 });
 
+// =============================================================================
+// MENTOR REVIEW SYSTEM
+// =============================================================================
+
+import { mentorReviewService } from "./mentor-review.js";
+
+/**
+ * GET /api/mentors
+ * Get available mentors (optionally filtered by goal)
+ */
+router.get("/mentors", (req: Request, res: Response) => {
+  const goal = req.query.goal as string | undefined;
+
+  const mentors = goal
+    ? mentorReviewService.getMentorsForGoal(goal)
+    : mentorReviewService.getAllMentors();
+
+  res.json({
+    success: true,
+    data: mentors,
+  });
+});
+
+/**
+ * GET /api/mentors/:id
+ * Get mentor details
+ */
+router.get("/mentors/:id", (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const mentor = mentorReviewService.getMentor(id);
+
+  if (!mentor) {
+    res.status(404).json({
+      success: false,
+      message: "Mentor not found",
+    });
+    return;
+  }
+
+  res.json({
+    success: true,
+    data: mentor,
+  });
+});
+
+/**
+ * POST /api/review/submit
+ * Submit roadmap for mentor review
+ */
+router.post("/review/submit", (req: Request, res: Response) => {
+  try {
+    const { learnerId, goal, skills, currentSkills, estimatedWeeks, preferredMentorId } = req.body;
+
+    if (!learnerId || !goal || !skills) {
+      res.status(400).json({
+        success: false,
+        message: "learnerId, goal, and skills are required",
+      });
+      return;
+    }
+
+    const review = mentorReviewService.submitForReview(
+      learnerId,
+      {
+        goal,
+        skills,
+        currentSkills: currentSkills || [],
+        estimatedWeeks: estimatedWeeks || 0,
+      },
+      preferredMentorId
+    );
+
+    const mentor = mentorReviewService.getMentor(review.mentorId);
+
+    res.status(201).json({
+      success: true,
+      message: `Your roadmap has been submitted for review by ${mentor?.name || 'a mentor'}`,
+      data: {
+        reviewId: review.id,
+        status: review.status,
+        mentor: mentor ? {
+          id: mentor.id,
+          name: mentor.name,
+          title: mentor.title,
+          company: mentor.company,
+          location: mentor.location,
+        } : null,
+        submittedAt: review.submittedAt,
+      },
+    });
+  } catch (error) {
+    console.error("[API] Error submitting review:", error);
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to submit for review",
+    });
+  }
+});
+
+/**
+ * GET /api/review/:id
+ * Get review status
+ */
+router.get("/review/:id", (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const review = mentorReviewService.getReviewStatus(id);
+
+  if (!review) {
+    res.status(404).json({
+      success: false,
+      message: "Review not found",
+    });
+    return;
+  }
+
+  const mentor = mentorReviewService.getMentor(review.mentorId);
+
+  res.json({
+    success: true,
+    data: {
+      ...review,
+      mentor: mentor ? {
+        id: mentor.id,
+        name: mentor.name,
+        title: mentor.title,
+        company: mentor.company,
+        location: mentor.location,
+      } : null,
+    },
+  });
+});
+
+/**
+ * GET /api/learner/:id/reviews
+ * Get all reviews for a learner
+ */
+router.get("/learner/:id/reviews", (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const reviews = mentorReviewService.getReviewsForLearner(id);
+
+  res.json({
+    success: true,
+    data: reviews.map((r) => {
+      const mentor = mentorReviewService.getMentor(r.mentorId);
+      return {
+        ...r,
+        mentor: mentor ? { id: mentor.id, name: mentor.name, title: mentor.title } : null,
+      };
+    }),
+  });
+});
+
+/**
+ * POST /api/review/:id/simulate
+ * Simulate mentor review (for demo)
+ */
+router.post("/review/:id/simulate", async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const review = await mentorReviewService.simulateMentorReview(id);
+
+    if (!review) {
+      res.status(404).json({
+        success: false,
+        message: "Review not found",
+      });
+      return;
+    }
+
+    const mentor = mentorReviewService.getMentor(review.mentorId);
+
+    res.json({
+      success: true,
+      message: "Review completed",
+      data: {
+        ...review,
+        mentor: mentor ? {
+          id: mentor.id,
+          name: mentor.name,
+          title: mentor.title,
+        } : null,
+      },
+    });
+  } catch (error) {
+    console.error("[API] Error simulating review:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to simulate review",
+    });
+  }
+});
+
+// =============================================================================
+// WORK OPPORTUNITIES
+// =============================================================================
+
+/**
+ * GET /api/opportunities
+ * Get work opportunities (optionally filtered by goal or location)
+ */
+router.get("/opportunities", (req: Request, res: Response) => {
+  const goal = req.query.goal as string | undefined;
+  const location = req.query.location as "Bhopal" | "Indore" | "Remote" | undefined;
+
+  let opportunities;
+  if (goal) {
+    opportunities = mentorReviewService.getWorkOpportunities(goal);
+  } else if (location) {
+    opportunities = mentorReviewService.getWorkOpportunitiesByLocation(location);
+  } else {
+    opportunities = mentorReviewService.getAllWorkOpportunities();
+  }
+
+  res.json({
+    success: true,
+    data: opportunities,
+  });
+});
+
 export default router;
