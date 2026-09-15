@@ -1,47 +1,110 @@
-import express, { Express, Request, Response } from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
-import { corsOptions } from './config/cors.js';
-import { apiLimiter } from './middleware/rateLimiter.js';
-import { errorHandler } from './middleware/errorHandler.js';
-import apiRouter from './routes/index.js';
-import { sendError } from './utils/apiResponse.js';
+// =============================================================================
+// PATHPILOT API - Main Express Application
+// =============================================================================
 
-export function createApp(): Express {
-  const app = express();
+import express, { Express, Request, Response, NextFunction } from "express";
+import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
+import coreRoutes from "./core/routes.js";
+import { isAIAvailable } from "./core/ai-client.js";
 
-  // Security HTTP headers
-  app.use(helmet());
+const app: Express = express();
 
-  // CORS setup
-  app.use(cors(corsOptions));
+// Security middleware
+app.use(helmet());
 
-  // Request body parsers
-  app.use(express.json({ limit: '2mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+// CORS configuration
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || ["http://localhost:3000", "http://localhost:3001"],
+  credentials: true,
+}));
 
-  // HTTP request logging
-  if (process.env.NODE_ENV !== 'test') {
-    app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
-  }
+// Request parsing
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
 
-  // Apply general rate limiting to API routes
-  app.use('/api', apiLimiter);
-
-  // Mount API router
-  app.use('/api', apiRouter);
-
-  // 404 Catch-all handler
-  app.use((req: Request, res: Response) => {
-    sendError(res, `Route not found: ${req.method} ${req.originalUrl}`, 404);
-  });
-
-  // Centralized error handler
-  app.use(errorHandler);
-
-  return app;
+// Logging
+if (process.env.NODE_ENV !== "test") {
+  app.use(morgan("dev"));
 }
 
-export const app = createApp();
+// =============================================================================
+// API ROUTES
+// =============================================================================
+
+// Core PathPilot routes (MVP features)
+app.use("/api", coreRoutes);
+
+// =============================================================================
+// ROOT ENDPOINT - API Documentation
+// =============================================================================
+
+app.get("/", (_req: Request, res: Response) => {
+  res.json({
+    service: "PathPilot API",
+    tagline: "Don't follow a roadmap. Follow your next move.",
+    version: "1.0.0-mvp",
+    aiAvailable: isAIAvailable(),
+    coreFeatures: {
+      "1_SkillGPS": "Calculates your next best learning action",
+      "2_LearnBuildProveAdapt": "Checkpoint system with proof-based progression",
+      "USP": "Proof-based next move - prove skills before moving forward",
+    },
+    endpoints: {
+      health: "GET /api/health",
+      goals: {
+        list: "GET /api/goals",
+        skills: "GET /api/goals/:goal/skills",
+      },
+      nextMove: "POST /api/next-move",
+      learner: {
+        start: "POST /api/learner/start",
+        get: "GET /api/learner/:id",
+        progress: "GET /api/learner/:id/progress",
+        checkpoint: "POST /api/learner/:id/checkpoint",
+        replan: "POST /api/learner/:id/replan",
+      },
+    },
+    exampleFlow: [
+      "1. POST /api/learner/start - Start learning session",
+      "2. POST /api/learner/:id/checkpoint {status: 'LEARNING'} - Start learning",
+      "3. POST /api/learner/:id/checkpoint {status: 'BUILDING'} - Start project",
+      "4. POST /api/learner/:id/checkpoint {status: 'COMPLETED'} - Mark done",
+      "   OR {status: 'STUCK', stuckReason: '...'} - Get help",
+    ],
+  });
+});
+
+// =============================================================================
+// ERROR HANDLING
+// =============================================================================
+
+// 404 handler
+app.use((_req: Request, res: Response) => {
+  res.status(404).json({
+    success: false,
+    message: "Endpoint not found. Check GET / for available endpoints.",
+  });
+});
+
+// Global error handler
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error("[Error]", err.message);
+
+  if (err.name === "ZodError") {
+    res.status(400).json({
+      success: false,
+      message: "Validation error",
+      errors: err,
+    });
+    return;
+  }
+
+  res.status(500).json({
+    success: false,
+    message: process.env.NODE_ENV === "production" ? "Internal server error" : err.message,
+  });
+});
+
 export default app;

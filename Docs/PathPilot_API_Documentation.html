@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PathPilot API Documentation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: #1a1a1a;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      background: #fff;
+    }
+    h1 { font-size: 2.5em; margin-bottom: 10px; color: #000; }
+    h2 { font-size: 1.5em; margin: 30px 0 15px; padding-bottom: 8px; border-bottom: 2px solid #000; }
+    h3 { font-size: 1.2em; margin: 25px 0 10px; color: #333; }
+    h4 { font-size: 1em; margin: 15px 0 8px; color: #555; }
+    p { margin: 10px 0; }
+    .tagline { color: #666; font-style: italic; margin-bottom: 30px; }
+    .version { background: #f0f0f0; padding: 15px; border-radius: 8px; margin: 20px 0; }
+    .version span { display: block; margin: 5px 0; }
+    code {
+      background: #f5f5f5;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.9em;
+    }
+    pre {
+      background: #1a1a1a;
+      color: #f0f0f0;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 15px 0;
+      font-size: 0.85em;
+      line-height: 1.5;
+    }
+    pre code { background: none; padding: 0; color: inherit; }
+    .endpoint {
+      background: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .endpoint-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .method {
+      background: #000;
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 0.85em;
+    }
+    .method.post { background: #2ecc71; }
+    .method.get { background: #3498db; }
+    .path { font-family: monospace; font-size: 1.1em; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+    th { background: #f5f5f5; font-weight: 600; }
+    .note {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 12px 15px;
+      margin: 15px 0;
+      border-radius: 0 8px 8px 0;
+    }
+    .feature-box {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .feature {
+      background: #f0f0f0;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .feature h4 { margin: 0 0 5px; }
+    .feature p { margin: 0; font-size: 0.9em; color: #666; }
+    hr { border: none; border-top: 1px solid #eee; margin: 30px 0; }
+    @media print {
+      body { padding: 20px; }
+      .endpoint { break-inside: avoid; }
+      pre { white-space: pre-wrap; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>PathPilot API Documentation</h1>
+<p class="tagline">Don't follow a roadmap. Follow your next move.</p>
+
+<div class="version">
+  <span><strong>Version:</strong> 1.0.0-MVP</span>
+  <span><strong>Base URL:</strong> <code>http://localhost:5001/api</code></span>
+  <span><strong>Content-Type:</strong> <code>application/json</code></span>
+</div>
+
+<h2>Core Features</h2>
+<div class="feature-box">
+  <div class="feature">
+    <h4>1. Skill GPS</h4>
+    <p>Next Best Action</p>
+  </div>
+  <div class="feature">
+    <h4>2. Checkpoint</h4>
+    <p>Learn → Build → Prove → Adapt</p>
+  </div>
+  <div class="feature">
+    <h4>USP</h4>
+    <p>Proof-Based Progression</p>
+  </div>
+</div>
+
+<hr>
+
+<h2>API Endpoints</h2>
+
+<!-- Health Check -->
+<div class="endpoint">
+  <div class="endpoint-header">
+    <span class="method get">GET</span>
+    <span class="path">/api/health</span>
+  </div>
+  <p>Check if the API is running and AI is available.</p>
+  <h4>Response:</h4>
+  <pre><code>{
+  "status": "ok",
+  "service": "PathPilot API",
+  "version": "1.0.0-mvp",
+  "aiAvailable": true,
+  "features": {
+    "skillGPS": true,
+    "learnBuildProveAdapt": true,
+    "proofBasedNextMove": true
+  }
+}</code></pre>
+</div>
+
+<!-- Get Goals -->
+<div class="endpoint">
+  <div class="endpoint-header">
+    <span class="method get">GET</span>
+    <span class="path">/api/goals</span>
+  </div>
+  <p>List all available learning goals.</p>
+  <h4>Response:</h4>
+  <pre><code>{
+  "success": true,
+  "data": [
+    "Frontend Developer",
+    "Backend Developer",
+    "Fullstack Developer"
+  ]
+}</code></pre>
+</div>
+
+<!-- Get Skills for Goal -->
+<div class="endpoint">
+  <div class="endpoint-header">
+    <span class="method get">GET</span>
+    <span class="path">/api/goals/:goal/skills</span>
+  </div>
+  <p>Get the skills required for a specific learning goal.</p>
+  <h4>Example:</h4>
+  <pre><code>GET /api/goals/frontend-developer/skills</code></pre>
+  <h4>Response:</h4>
+  <pre><code>{
+  "success": true,
+  "data": {
+    "goal": "frontend-developer",
+    "skills": [
+      { "id": "html-basics", "name": "HTML Basics" },
+      { "id": "css-basics", "name": "CSS Basics" },
+      { "id": "javascript-fundamentals", "name": "JavaScript Fundamentals" },
+      { "id": "git-github", "name": "Git & GitHub" },
+      { "id": "responsive-design", "name": "Responsive Web Design" },
+      { "id": "react-basics", "name": "React Basics" }
+    ],
+    "totalSkills": 6
+  }
+}</code></pre>
+</div>
+
+<!-- Next Move -->
+<div class="endpoint">
+  <div class="endpoint-header">
+    <span class="method post">POST</span>
+    <span class="path">/api/next-move</span>
+  </div>
+  <p><strong>Core Feature 1: Skill GPS</strong> - Calculate the next best skill to learn.</p>
+  <h4>Request Body:</h4>
+  <pre><code>{
+  "goal": "Frontend Developer",
+  "currentSkills": ["html", "css"],
+  "dailyMinutes": 60,
+  "device": "laptop",
+  "name": "Rahul"
+}</code></pre>
+  <table>
+    <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+    <tr><td>goal</td><td>string</td><td>Yes</td><td>Learning goal</td></tr>
+    <tr><td>currentSkills</td><td>string[]</td><td>No</td><td>Skills already known</td></tr>
+    <tr><td>dailyMinutes</td><td>number</td><td>No</td><td>Minutes per day (default: 60)</td></tr>
+    <tr><td>device</td><td>string</td><td>No</td><td>"mobile", "laptop", "both"</td></tr>
+    <tr><td>name</td><td>string</td><td>No</td><td>Learner name</td></tr>
+  </table>
+  <h4>Response:</h4>
+  <pre><code>{
+  "success": true,
+  "data": {
+    "skillGap": {
+      "totalRequired": 6,
+      "alreadyKnow": 2,
+      "stillNeed": 4,
+      "progressPercent": 33
+    },
+    "nextMove": {
+      "skill": {
+        "id": "javascript-fundamentals",
+        "name": "JavaScript Fundamentals",
+        "estimatedDays": 25
+      },
+      "whyThisSkill": "JavaScript is your next step...",
+      "learningTip": "Practice 60 minutes daily..."
+    },
+    "resource": {
+      "title": "JavaScript Algorithms - freeCodeCamp",
+      "url": "https://www.freecodecamp.org/..."
+    },
+    "project": {
+      "title": "Simple Calculator",
+      "acceptanceCriteria": [...]
+    }
+  }
+}</code></pre>
+</div>
+
+<!-- Start Session -->
+<div class="endpoint">
+  <div class="endpoint-header">
+    <span class="method post">POST</span>
+    <span class="path">/api/learner/start</span>
+  </div>
+  <p>Start a new learning session. Returns a <code>learnerId</code> for tracking.</p>
+  <h4>Request Body:</h4>
+  <pre><code>{
+  "goal": "Frontend Developer",
+  "currentSkills": ["html", "css"],
+  "dailyMinutes": 60,
+  "device": "laptop",
+  "name": "Priya"
+}</code></pre>
+  <h4>Response:</h4>
+  <pre><code>{
+  "success": true,
+  "message": "Learning session started!",
+  "data": {
+    "learnerId": "f6ae5932-7fb1-4288-b69b-106e538d6f88",
+    "learnerState": { ... },
+    "nextMove": { ... }
+  }
+}</code></pre>
+  <div class="note">
+    <strong>Important:</strong> Save the <code>learnerId</code> for all subsequent API calls.
+  </div>
+</div>
+
+<!-- Update Checkpoint -->
+<div class="endpoint">
+  <div class="endpoint-header">
+    <span class="method post">POST</span>
+    <span class="path">/api/learner/:id/checkpoint</span>
+  </div>
+  <p><strong>Core Feature 2: Learn → Build → Prove → Adapt</strong></p>
+  <h4>Request Body:</h4>
+  <pre><code>{
+  "status": "LEARNING",
+  "stuckReason": "Optional - only for STUCK status"
+}</code></pre>
+  <table>
+    <tr><th>Status</th><th>Description</th></tr>
+    <tr><td><code>LEARNING</code></td><td>Started learning from the resource</td></tr>
+    <tr><td><code>BUILDING</code></td><td>Started building the mini project</td></tr>
+    <tr><td><code>STUCK</code></td><td>Needs help (requires stuckReason)</td></tr>
+    <tr><td><code>COMPLETED</code></td><td>Proved the skill, ready for next</td></tr>
+  </table>
+
+  <h4>Example - STUCK (Get AI Help):</h4>
+  <pre><code>POST /api/learner/f6ae5932.../checkpoint
+{
+  "status": "STUCK",
+  "stuckReason": "I don't understand event listeners"
+}</code></pre>
+  <h4>Response:</h4>
+  <pre><code>{
+  "success": true,
+  "message": "It's okay to be stuck. Let me help.",
+  "data": {
+    "stuckHelp": {
+      "explanation": "Let's break this down...",
+      "simplifiedSteps": [
+        "Take a 5-minute break",
+        "Re-read the resource section",
+        "Try one small thing first"
+      ],
+      "encouragement": "Every developer gets stuck!"
+    }
+  }
+}</code></pre>
+
+  <h4>Example - COMPLETED:</h4>
+  <pre><code>POST /api/learner/f6ae5932.../checkpoint
+{
+  "status": "COMPLETED"
+}</code></pre>
+  <h4>Response:</h4>
+  <pre><code>{
+  "success": true,
+  "message": "Great work! Ready for Git & GitHub?",
+  "data": {
+    "nextMove": { ... }
+  }
+}</code></pre>
+</div>
+
+<!-- Get Progress -->
+<div class="endpoint">
+  <div class="endpoint-header">
+    <span class="method get">GET</span>
+    <span class="path">/api/learner/:id/progress</span>
+  </div>
+  <p>Get learner's progress summary.</p>
+  <h4>Response:</h4>
+  <pre><code>{
+  "success": true,
+  "data": {
+    "totalSkills": 6,
+    "completedSkills": 3,
+    "progressPercent": 50,
+    "currentSkill": "Git & GitHub",
+    "currentStatus": "NOT_STARTED",
+    "completedList": [
+      { "name": "HTML Basics", "completedAt": "..." },
+      { "name": "CSS Basics", "completedAt": "..." },
+      { "name": "JavaScript Fundamentals", "completedAt": "..." }
+    ]
+  }
+}</code></pre>
+</div>
+
+<hr>
+
+<h2>Testing with cURL</h2>
+<pre><code># 1. Health check
+curl http://localhost:5001/api/health
+
+# 2. Get goals
+curl http://localhost:5001/api/goals
+
+# 3. Get next move
+curl -X POST http://localhost:5001/api/next-move \
+  -H "Content-Type: application/json" \
+  -d '{"goal":"Frontend Developer","currentSkills":["html","css"]}'
+
+# 4. Start session
+curl -X POST http://localhost:5001/api/learner/start \
+  -H "Content-Type: application/json" \
+  -d '{"goal":"Frontend Developer","currentSkills":["html","css"],"name":"Test"}'
+
+# 5. Update checkpoint (use learnerId from step 4)
+curl -X POST http://localhost:5001/api/learner/LEARNER_ID/checkpoint \
+  -H "Content-Type: application/json" \
+  -d '{"status":"COMPLETED"}'
+</code></pre>
+
+<hr>
+
+<h2>Error Responses</h2>
+<pre><code>{
+  "success": false,
+  "message": "Error description"
+}</code></pre>
+<table>
+  <tr><th>Code</th><th>Description</th></tr>
+  <tr><td>400</td><td>Bad Request - Invalid input</td></tr>
+  <tr><td>404</td><td>Not Found - Learner not found</td></tr>
+  <tr><td>500</td><td>Server Error</td></tr>
+</table>
+
+<hr>
+
+<p style="text-align: center; color: #666; margin-top: 40px;">
+  <strong>PathPilot</strong> - Don't follow a roadmap. Follow your next move.
+</p>
+
+</body>
+</html>

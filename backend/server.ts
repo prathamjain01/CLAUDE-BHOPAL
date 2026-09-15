@@ -1,43 +1,58 @@
-import app from './src/app.js';
-import { connectDB, disconnectDB } from './src/config/db.js';
-import { config } from './src/config/env.js';
-import { logger } from './src/utils/logger.js';
+// =============================================================================
+// PATHPILOT SERVER - Entry Point
+// =============================================================================
+
+import "dotenv/config";
+import app from "./src/app.js";
+import { isAIAvailable } from "./src/core/ai-client.js";
+
+const PORT = process.env.PORT || 5000;
 
 async function startServer() {
-  try {
-    // Attempt database connection
-    await connectDB();
+  console.log("\n╔══════════════════════════════════════════════════════════╗");
+  console.log("║                   PATHPILOT API                          ║");
+  console.log("║     Don't follow a roadmap. Follow your next move.       ║");
+  console.log("╚══════════════════════════════════════════════════════════╝\n");
 
-    const server = app.listen(config.port, () => {
-      logger.info(`=================================================`);
-      logger.info(`🚀 PathPilot API server is running on port ${config.port}`);
-      logger.info(`🌍 Environment: ${config.nodeEnv}`);
-      logger.info(`📡 Health check: http://localhost:${config.port}/api/health`);
-      logger.info(`=================================================`);
-    });
-
-    // Graceful shutdown handlers
-    const shutdown = async (signal: string) => {
-      logger.info(`[Server] Received ${signal}. Starting graceful shutdown...`);
-      server.close(async () => {
-        await disconnectDB();
-        logger.info('[Server] HTTP server closed. Exiting process.');
-        process.exit(0);
-      });
-
-      // Force exit after 10s if connections linger
-      setTimeout(() => {
-        logger.error('[Server] Could not close connections in time, forcefully shutting down');
-        process.exit(1);
-      }, 10000);
-    };
-
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
-    process.on('SIGINT', () => shutdown('SIGINT'));
-  } catch (error) {
-    logger.error('[Server] Fatal startup error:', error);
-    process.exit(1);
+  // Check AI availability
+  if (isAIAvailable()) {
+    console.log("✓ [AI] Gemini API connected - personalized explanations enabled");
+  } else {
+    console.log("⚠ [AI] No GEMINI_API_KEY - using deterministic fallback");
+    console.log("        (Add GEMINI_API_KEY to .env for AI-powered features)");
   }
+
+  // MVP: Running in-memory (no MongoDB needed for hackathon)
+  console.log("✓ [DB] In-memory storage active (MVP mode)");
+
+  // Start HTTP server
+  app.listen(PORT, () => {
+    console.log(`\n✓ [Server] Running on http://localhost:${PORT}`);
+    console.log(`  Environment: ${process.env.NODE_ENV || "development"}\n`);
+
+    console.log("╔══════════════════════════════════════════════════════════╗");
+    console.log("║  CORE FEATURES:                                          ║");
+    console.log("║  1. Skill GPS - Next Best Action                         ║");
+    console.log("║  2. Learn → Build → Prove → Adapt                        ║");
+    console.log("║  USP: Proof-Based Next Move                              ║");
+    console.log("╠══════════════════════════════════════════════════════════╣");
+    console.log("║  ENDPOINTS:                                              ║");
+    console.log(`║  GET  http://localhost:${PORT}/api/health                    ║`);
+    console.log(`║  GET  http://localhost:${PORT}/api/goals                     ║`);
+    console.log(`║  POST http://localhost:${PORT}/api/next-move                 ║`);
+    console.log(`║  POST http://localhost:${PORT}/api/learner/start             ║`);
+    console.log(`║  POST http://localhost:${PORT}/api/learner/:id/checkpoint    ║`);
+    console.log("╚══════════════════════════════════════════════════════════╝\n");
+  });
 }
 
-startServer();
+// Graceful shutdown
+process.on("SIGINT", () => {
+  console.log("\n[Server] Shutting down...");
+  process.exit(0);
+});
+
+startServer().catch((err) => {
+  console.error("[Server] Failed to start:", err);
+  process.exit(1);
+});
