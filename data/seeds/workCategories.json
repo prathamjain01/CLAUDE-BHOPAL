@@ -1,1 +1,62 @@
-// Seed data - Work categories (Bhopal/Indore/Remote)
+[
+  {
+    "slug": "junior-frontend-dev",
+    "title": "Junior Frontend Web Developer",
+    "locationType": "Bhopal",
+    "requiredSkills": ["html-basics", "css-basics", "responsive-design", "javascript-fundamentals", "git-github"],
+    "optionalSkills": ["react-basics", "async-javascript-apis"],
+    "description": "Translates design mockups into responsive, accessible web interfaces and maintains client websites for local IT firms and agencies in Bhopal (MP Nagar, Govindpura Industrial Area).",
+    "typicalRoles": ["Junior Frontend Developer", "Web Developer Intern", "UI Developer"],
+    "localContext": "IT software houses and digital agencies in Bhopal often hire entry-level web developers who can demonstrate working portfolios and mobile-responsive website builds.",
+    "source": "Bhopal Local IT & Digital Agency Market Survey 2024-2025",
+    "disclaimer": "This mapping describes skill alignments and typical requirements. It does not guarantee employment or job placement."
+  },
+  {
+    "slug": "web-designer-ui-dev",
+    "title": "Web Designer & UI Implementation Specialist",
+    "locationType": "Indore",
+    "requiredSkills": ["html-basics", "css-basics", "responsive-design", "git-github"],
+    "optionalSkills": ["javascript-fundamentals", "terminal-tooling"],
+    "description": "Designs and develops user-friendly, responsive landing pages, business websites, and marketing assets for tech startups and SMEs in Indore (Crystal IT Park, Super Corridor).",
+    "typicalRoles": ["Web Designer", "UI Implementer", "Landing Page Specialist"],
+    "localContext": "Indore's expanding IT parks have high demand for developers who can swiftly create responsive marketing sites, e-commerce landing pages, and clean UI components.",
+    "source": "Indore Super Corridor & IT Park Tech Roles Survey 2024-2025",
+    "disclaimer": "This mapping describes skill alignments and typical requirements. It does not guarantee employment or job placement."
+  },
+  {
+    "slug": "mern-stack-intern",
+    "title": "Full-Stack JavaScript / MERN Intern",
+    "locationType": "Indore",
+    "requiredSkills": ["javascript-fundamentals", "react-basics", "nodejs-express", "mongodb-basics", "rest-apis"],
+    "optionalSkills": ["git-github", "async-javascript-apis"],
+    "description": "Assists senior engineers in creating end-to-end web applications, connecting React frontends with Express/MongoDB REST APIs.",
+    "typicalRoles": ["Full-Stack Intern", "Junior MERN Developer", "Backend/Node.js Trainee"],
+    "localContext": "Mid-tier product and service companies in Indore frequently recruit MERN stack interns who have built full-stack projects with CRUD features and JWT authentication.",
+    "source": "Madhya Pradesh Tech Internship Ecosystem Report 2024-2025",
+    "disclaimer": "This mapping describes skill alignments and typical requirements. It does not guarantee employment or job placement."
+  },
+  {
+    "slug": "remote-junior-frontend",
+    "title": "Remote Junior React / Frontend Developer",
+    "locationType": "Remote",
+    "requiredSkills": ["html-basics", "css-basics", "responsive-design", "javascript-fundamentals", "git-github", "react-basics", "async-javascript-apis"],
+    "optionalSkills": ["rest-apis", "terminal-tooling"],
+    "description": "Contributes to remote software teams building modern web applications, implementing interactive components, integrating REST endpoints, and submitting GitHub Pull Requests.",
+    "typicalRoles": ["Remote Frontend Engineer", "Contract UI Developer", "Open-Source Contributor"],
+    "localContext": "Remote roles require strong independent problem-solving, structured Git workflow, deployed project links, and written communication skills.",
+    "source": "Remote India Entry-Level Tech Hiring Survey 2024-2025",
+    "disclaimer": "This mapping describes skill alignments and typical requirements. It does not guarantee employment or job placement."
+  },
+  {
+    "slug": "cms-web-assistant",
+    "title": "Web Content & CMS Site Assistant",
+    "locationType": "Bhopal",
+    "requiredSkills": ["html-basics", "css-basics", "terminal-tooling"],
+    "optionalSkills": ["javascript-fundamentals", "responsive-design"],
+    "description": "Maintains and updates educational portals, local business sites, and WordPress/CMS platforms for small enterprises and coaching institutes across Bhopal.",
+    "typicalRoles": ["CMS Assistant", "Website Coordinator", "Junior Web Assistant"],
+    "localContext": "Coaching institutes, colleges, and local retailers in Bhopal require tech-savvy individuals who understand basic HTML/CSS and can maintain websites.",
+    "source": "Bhopal Local Small Business Tech Needs Survey 2024-2025",
+    "disclaimer": "This mapping describes skill alignments and typical requirements. It does not guarantee employment or job placement."
+  }
+]

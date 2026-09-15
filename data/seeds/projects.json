@@ -1,1 +1,98 @@
-// Seed data - Projects catalogue
+[
+  {
+    "slug": "personal-portfolio-site",
+    "title": "Responsive Single-Page Personal Portfolio",
+    "skillSlugs": ["html-basics", "css-basics", "responsive-design"],
+    "difficulty": "beginner",
+    "description": "Create a clean, mobile-responsive single-page website showcasing your bio, education, current learning goals, and contact links.",
+    "acceptanceCriteria": [
+      "Page contains semantic header, about, skills, and contact sections using HTML5 tags.",
+      "Layout is fully responsive across smartphone (375px) and laptop (1200px) screens with no horizontal overflow.",
+      "Uses CSS Flexbox or Grid for layout alignment and includes at least one hover effect.",
+      "Code is organized into index.html and style.css files."
+    ],
+    "evidenceRequirements": ["github", "deployedUrl", "textExplanation"],
+    "estimatedHours": 8,
+    "starterCodeUrl": "https://github.com/pathpilot-curated/starter-html-css-portfolio"
+  },
+  {
+    "slug": "tier2-business-directory",
+    "title": "Bhopal Local Services Showcase",
+    "skillSlugs": ["responsive-design", "javascript-fundamentals"],
+    "difficulty": "beginner",
+    "description": "Build an interactive card-based showcase for local businesses in Bhopal (e.g. local repair shops, cafes, coaching centers) with category filtering and search.",
+    "acceptanceCriteria": [
+      "Displays at least 6 local business cards with title, category, address/neighborhood, and badge.",
+      "Includes a search input that filters cards in real-time as the user types.",
+      "Includes category pill buttons (e.g., Food, Services, Education) that filter cards via JavaScript.",
+      "Gracefully shows an empty state message if no matching businesses are found."
+    ],
+    "evidenceRequirements": ["github", "deployedUrl", "textExplanation"],
+    "estimatedHours": 10,
+    "starterCodeUrl": "https://github.com/pathpilot-curated/starter-local-showcase"
+  },
+  {
+    "slug": "smart-expense-tracker",
+    "title": "Interactive Daily Expense Tracker",
+    "skillSlugs": ["javascript-fundamentals"],
+    "difficulty": "beginner",
+    "description": "Build a client-side daily expense tracker where learners can add income and expenses, view balance updates, and persist transactions using browser localStorage.",
+    "acceptanceCriteria": [
+      "User can input transaction description, amount, and type (income vs expense).",
+      "Current balance, total income, and total expense calculate and update dynamically.",
+      "Transactions are saved in localStorage so refreshing the page preserves the data.",
+      "User can delete a transaction from the list."
+    ],
+    "evidenceRequirements": ["github", "deployedUrl", "textExplanation"],
+    "estimatedHours": 12,
+    "starterCodeUrl": "https://github.com/pathpilot-curated/starter-expense-tracker"
+  },
+  {
+    "slug": "weather-city-dashboard",
+    "title": "Tier-2 Weather & Air Quality Dashboard",
+    "skillSlugs": ["async-javascript-apis", "javascript-fundamentals"],
+    "difficulty": "intermediate",
+    "description": "Fetch live weather data for cities (defaults to Bhopal/Indore) using a free weather API (Open-Meteo or OpenWeather) with async/await and error handling.",
+    "acceptanceCriteria": [
+      "Fetches real-time temperature, wind speed, and weather condition using fetch() and async/await.",
+      "Shows a loading spinner while API request is in-flight.",
+      "Gracefully handles network errors or invalid city names with user-friendly error banners.",
+      "Pre-populates quick buttons for Bhopal, Indore, Jabalpur, and Gwalior."
+    ],
+    "evidenceRequirements": ["github", "deployedUrl", "textExplanation"],
+    "estimatedHours": 10,
+    "starterCodeUrl": "https://github.com/pathpilot-curated/starter-weather-api"
+  },
+  {
+    "slug": "react-habit-tracker",
+    "title": "React Daily Habit & Study Routine Tracker",
+    "skillSlugs": ["react-basics", "responsive-design"],
+    "difficulty": "intermediate",
+    "description": "A component-based React application to track daily learning habits, study hours, and weekly streaks with clean state management.",
+    "acceptanceCriteria": [
+      "Decomposed into reusable React components (HabitCard, StreakCounter, AddHabitModal).",
+      "Uses React state (useState) and side effects (useEffect) to store habits in browser storage.",
+      "Allows toggling daily completion status with visual feedback.",
+      "Responsive on mobile screens."
+    ],
+    "evidenceRequirements": ["github", "deployedUrl", "screenshot", "textExplanation"],
+    "estimatedHours": 15,
+    "starterCodeUrl": "https://github.com/pathpilot-curated/starter-react-habits"
+  },
+  {
+    "slug": "restful-learning-notes-api",
+    "title": "RESTful Study Notes & Resource API",
+    "skillSlugs": ["nodejs-express", "mongodb-basics", "rest-apis"],
+    "difficulty": "intermediate",
+    "description": "Build a secure REST API with Express and MongoDB Mongoose that allows learners to store, search, and categorize their study notes with full CRUD operations.",
+    "acceptanceCriteria": [
+      "Implements GET /api/notes, POST /api/notes, PUT /api/notes/:id, DELETE /api/notes/:id.",
+      "Validates request payloads using Zod or Mongoose schema validators.",
+      "Properly handles 400 Bad Request, 404 Not Found, and 500 Internal Error codes with JSON responses.",
+      "Includes a sample seed script or Postman/Thunder Client collection demonstrating all endpoints."
+    ],
+    "evidenceRequirements": ["github", "textExplanation"],
+    "estimatedHours": 16,
+    "starterCodeUrl": "https://github.com/pathpilot-curated/starter-express-notes-api"
+  }
+]

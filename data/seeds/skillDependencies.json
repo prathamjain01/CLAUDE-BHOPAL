@@ -1,1 +1,57 @@
-// Seed data - Skill dependencies
+[
+  {
+    "skillSlug": "css-basics",
+    "prerequisiteSlug": "html-basics",
+    "relationType": "PREREQUISITE"
+  },
+  {
+    "skillSlug": "responsive-design",
+    "prerequisiteSlug": "css-basics",
+    "relationType": "PREREQUISITE"
+  },
+  {
+    "skillSlug": "javascript-fundamentals",
+    "prerequisiteSlug": "html-basics",
+    "relationType": "PREREQUISITE"
+  },
+  {
+    "skillSlug": "javascript-fundamentals",
+    "prerequisiteSlug": "css-basics",
+    "relationType": "PREREQUISITE"
+  },
+  {
+    "skillSlug": "git-github",
+    "prerequisiteSlug": "terminal-tooling",
+    "relationType": "PREREQUISITE"
+  },
+  {
+    "skillSlug": "async-javascript-apis",
+    "prerequisiteSlug": "javascript-fundamentals",
+    "relationType": "PREREQUISITE"
+  },
+  {
+    "skillSlug": "react-basics",
+    "prerequisiteSlug": "javascript-fundamentals",
+    "relationType": "PREREQUISITE"
+  },
+  {
+    "skillSlug": "react-basics",
+    "prerequisiteSlug": "responsive-design",
+    "relationType": "PREREQUISITE"
+  },
+  {
+    "skillSlug": "nodejs-express",
+    "prerequisiteSlug": "javascript-fundamentals",
+    "relationType": "PREREQUISITE"
+  },
+  {
+    "skillSlug": "mongodb-basics",
+    "prerequisiteSlug": "nodejs-express",
+    "relationType": "PREREQUISITE"
+  },
+  {
+    "skillSlug": "rest-apis",
+    "prerequisiteSlug": "nodejs-express",
+    "relationType": "PREREQUISITE"
+  }
+]

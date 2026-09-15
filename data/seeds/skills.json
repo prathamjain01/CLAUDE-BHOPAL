@@ -1,1 +1,101 @@
-// Seed data - Skills catalogue
+[
+  {
+    "slug": "terminal-tooling",
+    "name": "Command Line & Dev Tools",
+    "category": "Tools",
+    "description": "Basic navigation in the terminal, managing files, and using browser developer tools.",
+    "level": "beginner",
+    "toolingExplanation": "The terminal is a text-based window where you give commands to your computer instead of clicking icons. DevTools in Chrome or Edge let you inspect web pages.",
+    "estimatedHours": 6
+  },
+  {
+    "slug": "html-basics",
+    "name": "HTML5 Fundamentals",
+    "category": "Frontend",
+    "description": "Structure of web pages using semantic HTML tags, headings, forms, and accessibility basics.",
+    "level": "beginner",
+    "toolingExplanation": "HTML files (.html) are plain text files that browsers interpret to show headings, paragraphs, buttons, and links.",
+    "estimatedHours": 10
+  },
+  {
+    "slug": "css-basics",
+    "name": "CSS3 Styling & Box Model",
+    "category": "Frontend",
+    "description": "Styling web pages, colors, fonts, margins, padding, borders, and CSS selectors.",
+    "level": "beginner",
+    "toolingExplanation": "CSS files (.css) tell the browser how HTML elements should look: their colors, spacing, and sizing.",
+    "estimatedHours": 14
+  },
+  {
+    "slug": "responsive-design",
+    "name": "Responsive Web Design & Flexbox",
+    "category": "Frontend",
+    "description": "Building layouts that adjust seamlessly to mobile phones, tablets, and desktops using Flexbox and media queries.",
+    "level": "beginner",
+    "toolingExplanation": "Media queries and flexible layout boxes ensure your site looks great on small smartphone screens as well as laptops.",
+    "estimatedHours": 12
+  },
+  {
+    "slug": "git-github",
+    "name": "Git & GitHub Version Control",
+    "category": "Tools",
+    "description": "Tracking code changes with Git, creating commits, branches, and publishing repositories to GitHub.",
+    "level": "beginner",
+    "toolingExplanation": "Git is like a save-game system for your code. GitHub is a free website where you store and showcase your code online.",
+    "estimatedHours": 8
+  },
+  {
+    "slug": "javascript-fundamentals",
+    "name": "Modern JavaScript (ES6+)",
+    "category": "Frontend",
+    "description": "Variables, data types, loops, functions, DOM manipulation, events, and modern array methods.",
+    "level": "beginner",
+    "toolingExplanation": "JavaScript runs inside the browser and makes web pages interactive, like handling clicks, form validation, and animations.",
+    "estimatedHours": 25
+  },
+  {
+    "slug": "async-javascript-apis",
+    "name": "Async JavaScript & Fetch API",
+    "category": "Frontend",
+    "description": "Promises, async/await, and making HTTP network requests to external APIs using fetch.",
+    "level": "intermediate",
+    "toolingExplanation": "Async code lets your webpage load information from servers across the internet without freezing the user interface.",
+    "estimatedHours": 12
+  },
+  {
+    "slug": "react-basics",
+    "name": "React Fundamentals & Components",
+    "category": "Frontend",
+    "description": "Component-driven development, JSX, props, state with useState, and effects with useEffect.",
+    "level": "intermediate",
+    "toolingExplanation": "React is a popular library for building reusable UI components, powering modern web applications.",
+    "estimatedHours": 30
+  },
+  {
+    "slug": "nodejs-express",
+    "name": "Node.js & Express API Development",
+    "category": "Backend",
+    "description": "Building backend HTTP servers, routing, middleware, and JSON REST endpoints.",
+    "level": "intermediate",
+    "toolingExplanation": "Node.js lets you run JavaScript on a computer or server outside the browser to build APIs and handle business logic.",
+    "estimatedHours": 20
+  },
+  {
+    "slug": "mongodb-basics",
+    "name": "MongoDB & Database Modeling",
+    "category": "Database",
+    "description": "Document databases, MongoDB Atlas, Mongoose schemas, queries, and CRUD operations.",
+    "level": "intermediate",
+    "toolingExplanation": "MongoDB is a database that stores your application's data in flexible JSON-like documents.",
+    "estimatedHours": 16
+  },
+  {
+    "slug": "rest-apis",
+    "name": "RESTful API Design & Auth",
+    "category": "Backend",
+    "description": "Designing clean REST APIs, HTTP status codes, user authentication with JWT, and input validation.",
+    "level": "intermediate",
+    "toolingExplanation": "REST APIs provide standard endpoints where frontends and mobile apps can securely send and receive data.",
+    "estimatedHours": 15
+  }
+]
