@@ -1,26 +1,52 @@
-import { Request, Response, NextFunction } from 'express';
-import { progressService } from './service.js';
-import { sendSuccess } from '../../utils/apiResponse.js';
+import { Request, Response, NextFunction } from "express";
+import { progressService } from "./service.js";
+import { UpdateProgressSchema, StepParamSchema, PathwayParamSchema } from "./schema.js";
 
 export class ProgressController {
-  async updateProgress(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async updateStep(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const stepId = String(req.params.stepId);
-      const learnerId = req.user?.id;
-      const result = await progressService.updateStepProgress(stepId, learnerId, req.body);
-      sendSuccess(res, result, result.message);
-    } catch (error) {
-      next(error);
+      const { stepId } = StepParamSchema.parse(req.params);
+      const parsedBody = UpdateProgressSchema.parse(req.body);
+
+      const result = await progressService.updateStepProgress(stepId, parsedBody);
+
+      res.status(200).json({
+        success: true,
+        message: "Step progress updated successfully",
+        data: result.progress,
+        suggestReplan: result.suggestReplan,
+        replanReason: result.replanReason,
+      });
+    } catch (err) {
+      next(err);
     }
   }
 
-  async getPathwayProgress(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getByPathway(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const pathwayId = String(req.params.pathwayId);
-      const progress = await progressService.getPathwayProgress(pathwayId);
-      sendSuccess(res, progress);
-    } catch (error) {
-      next(error);
+      const { pathwayId } = PathwayParamSchema.parse(req.params);
+      const progressList = await progressService.getProgressByPathway(pathwayId);
+
+      res.status(200).json({
+        success: true,
+        data: progressList,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { pathwayId } = PathwayParamSchema.parse(req.params);
+      const summary = await progressService.getProgressSummary(pathwayId);
+
+      res.status(200).json({
+        success: true,
+        data: summary,
+      });
+    } catch (err) {
+      next(err);
     }
   }
 }

@@ -1,12 +1,10 @@
-import { Router } from 'express';
-import { progressController } from './controller.js';
-import { updateProgressSchema } from './schema.js';
-import { validateBody } from '../../middleware/validate.js';
-import { optionalAuth } from '../../middleware/auth.js';
+import { Router } from "express";
+import { progressController } from "./controller.js";
 
 const router = Router();
 
-router.patch('/:stepId', optionalAuth, validateBody(updateProgressSchema), progressController.updateProgress);
-router.get('/:pathwayId', progressController.getPathwayProgress);
+router.patch("/:stepId", (req, res, next) => progressController.updateStep(req, res, next));
+router.get("/pathway/:pathwayId", (req, res, next) => progressController.getByPathway(req, res, next));
+router.get("/pathway/:pathwayId/summary", (req, res, next) => progressController.getSummary(req, res, next));
 
 export default router;

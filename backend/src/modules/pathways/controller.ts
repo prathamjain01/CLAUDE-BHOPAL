@@ -1,47 +1,73 @@
-import { Request, Response, NextFunction } from 'express';
-import { pathwaysService } from './service.js';
-import { sendSuccess } from '../../utils/apiResponse.js';
+import { Request, Response, NextFunction } from "express";
+import { pathwayService } from "./service.js";
+import { GeneratePathwaySchema, ReplanPathwaySchema, PathwayParamSchema } from "./schema.js";
 
-export class PathwaysController {
-  async generatePathway(req: Request, res: Response, next: NextFunction): Promise<void> {
+export class PathwayController {
+  async generate(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.id;
-      const pathway = await pathwaysService.generatePathway(userId, req.body);
-      sendSuccess(res, pathway, 'Learning pathway generated successfully', 201);
-    } catch (error) {
-      next(error);
+      const parsedBody = GeneratePathwaySchema.parse(req.body);
+      const pathway = await pathwayService.generatePathway(parsedBody);
+      res.status(201).json({
+        success: true,
+        message: "Learning pathway generated successfully",
+        data: pathway,
+      });
+    } catch (err) {
+      next(err);
     }
   }
 
-  async getPathwayById(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const id = String(req.params.id);
-      const pathway = await pathwaysService.getPathwayByIdOrShare(id);
-      sendSuccess(res, pathway);
-    } catch (error) {
-      next(error);
+      const { id } = PathwayParamSchema.parse(req.params);
+      const pathway = await pathwayService.getPathwayById(id);
+
+      if (!pathway) {
+        res.status(404).json({
+          success: false,
+          message: `Pathway not found for id: ${id}`,
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        data: pathway,
+      });
+    } catch (err) {
+      next(err);
     }
   }
 
-  async replanPathway(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async replan(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const id = String(req.params.id);
-      const result = await pathwaysService.replanPathway(id, req.body);
-      sendSuccess(res, result, 'Pathway re-planned successfully');
-    } catch (error) {
-      next(error);
+      const { id } = PathwayParamSchema.parse(req.params);
+      const parsedBody = ReplanPathwaySchema.parse(req.body);
+      const updatedPathway = await pathwayService.replanPathway(id, parsedBody);
+
+      res.status(200).json({
+        success: true,
+        message: "Pathway re-planned successfully",
+        data: updatedPathway,
+      });
+    } catch (err) {
+      next(err);
     }
   }
 
-  async getShareableSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async share(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const id = String(req.params.id);
-      const summary = await pathwaysService.getShareableSummary(id);
-      sendSuccess(res, summary);
-    } catch (error) {
-      next(error);
+      const { id } = PathwayParamSchema.parse(req.params);
+      const shareData = await pathwayService.getShareablePathway(id);
+
+      res.status(200).json({
+        success: true,
+        data: shareData,
+      });
+    } catch (err) {
+      next(err);
     }
   }
 }
 
-export const pathwaysController = new PathwaysController();
+export const pathwayController = new PathwayController();

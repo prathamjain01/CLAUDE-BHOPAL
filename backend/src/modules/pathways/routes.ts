@@ -1,15 +1,11 @@
-import { Router } from 'express';
-import { pathwaysController } from './controller.js';
-import { generatePathwaySchema, replanPathwaySchema } from './schema.js';
-import { validateBody } from '../../middleware/validate.js';
-import { optionalAuth } from '../../middleware/auth.js';
-import { aiLimiter } from '../../middleware/rateLimiter.js';
+import { Router } from "express";
+import { pathwayController } from "./controller.js";
 
 const router = Router();
 
-router.post('/generate', optionalAuth, aiLimiter, validateBody(generatePathwaySchema), pathwaysController.generatePathway);
-router.get('/:id', optionalAuth, pathwaysController.getPathwayById);
-router.post('/:id/replan', optionalAuth, aiLimiter, validateBody(replanPathwaySchema), pathwaysController.replanPathway);
-router.get('/:id/share', pathwaysController.getShareableSummary);
+router.post("/generate", (req, res, next) => pathwayController.generate(req, res, next));
+router.get("/:id", (req, res, next) => pathwayController.getById(req, res, next));
+router.post("/:id/replan", (req, res, next) => pathwayController.replan(req, res, next));
+router.get("/:id/share", (req, res, next) => pathwayController.share(req, res, next));
 
 export default router;

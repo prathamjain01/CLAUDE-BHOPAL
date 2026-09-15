@@ -1,61 +1,101 @@
-import Anthropic from '@anthropic-ai/sdk';
-import { config } from '../config/env.js';
-import { logger } from '../utils/logger.js';
-import { SYSTEM_PROMPT } from './prompts.js';
+import Anthropic from "@anthropic-ai/sdk";
 
-let anthropicClient: Anthropic | null = null;
+// ---------------------------------------------------------------------------
+// Claude API Client – thin wrapper with retry, mock mode & error handling
+// ---------------------------------------------------------------------------
 
-if (config.claudeApiKey) {
-  try {
-    anthropicClient = new Anthropic({
-      apiKey: config.claudeApiKey,
-    });
-    logger.info('[AI] Anthropic Claude client initialized successfully.');
-  } catch (err) {
-    logger.warn('[AI] Failed to initialize Anthropic client, using fallback AI mode:', err);
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1000;
+const DEFAULT_MAX_TOKENS = 4096;
+const MODEL = "claude-sonnet-4-20250514";
+
+let client: Anthropic | null = null;
+
+export function getClient(): Anthropic | null {
+  const apiKey = process.env.CLAUDE_API_KEY;
+  if (!apiKey || apiKey.trim() === "") {
+    return null;
   }
-} else {
-  logger.info('[AI] No CLAUDE_API_KEY detected in environment. Running with resilient offline AI fallback.');
+  if (!client) {
+    client = new Anthropic({ apiKey });
+  }
+  return client;
 }
 
-export async function queryAI(prompt: string, timeoutMs = 12000): Promise<string | null> {
-  if (!anthropicClient) {
-    return null;
-  }
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+export interface ClaudeRequest {
+  systemPrompt: string;
+  userPrompt: string;
+  maxTokens?: number;
+}
 
-    const response = await anthropicClient.messages.create(
-      {
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 1500,
-        system: SYSTEM_PROMPT,
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-      },
-      { signal: controller.signal }
+export interface ClaudeResponse {
+  text: string;
+  usage?: { inputTokens: number; outputTokens: number };
+  isMock?: boolean;
+}
+
+/**
+ * Call Claude with automatic retry (exponential back-off).
+ * Returns raw text response or throws error if all retries fail.
+ */
+export async function callClaude(
+  request: ClaudeRequest
+): Promise<ClaudeResponse> {
+  const anthropic = getClient();
+  if (!anthropic) {
+    throw new Error(
+      "CLAUDE_API_KEY is not configured. Add it to .env or use deterministic fallback."
     );
-
-    clearTimeout(timer);
-
-    const firstBlock = response.content[0];
-    if (firstBlock && firstBlock.type === 'text') {
-      return firstBlock.text;
-    }
-
-    return null;
-  } catch (error: any) {
-    if (error.name === 'AbortError') {
-      logger.warn(`[AI] Claude API request timed out after ${timeoutMs}ms. Using deterministic fallback.`);
-    } else {
-      logger.warn('[AI] Error querying Claude API:', error.message || error);
-    }
-    return null;
   }
+
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await anthropic.messages.create({
+        model: MODEL,
+        max_tokens: request.maxTokens ?? DEFAULT_MAX_TOKENS,
+        system: request.systemPrompt,
+        messages: [{ role: "user", content: request.userPrompt }],
+      });
+
+      const textBlock = response.content.find((b) => b.type === "text");
+      if (!textBlock || textBlock.type !== "text") {
+        throw new Error("Claude response contained no text content block.");
+      }
+
+      return {
+        text: textBlock.text,
+        usage: {
+          inputTokens: response.usage.input_tokens,
+          outputTokens: response.usage.output_tokens,
+        },
+      };
+    } catch (err: unknown) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+
+      if (
+        err instanceof Anthropic.AuthenticationError ||
+        err instanceof Anthropic.PermissionDeniedError
+      ) {
+        throw lastError;
+      }
+
+      if (attempt < MAX_RETRIES) {
+        const delayMs = BASE_DELAY_MS * Math.pow(2, attempt - 1);
+        console.warn(
+          `[AI Client] Attempt ${attempt}/${MAX_RETRIES} failed: ${lastError.message}. Retrying in ${delayMs}ms...`
+        );
+        await delay(delayMs);
+      }
+    }
+  }
+
+  throw new Error(
+    `Claude API failed after ${MAX_RETRIES} attempts. Last error: ${lastError?.message}`
+  );
 }

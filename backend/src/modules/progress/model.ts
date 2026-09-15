@@ -1,72 +1,54 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Document, Schema } from "mongoose";
 
-export interface IProgressRecord extends Document {
-  pathwayId: string;
-  stepId: string;
-  learnerId?: string;
-  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED';
-  difficultyRating?: number;
-  notes?: string;
-  evidence?: {
-    githubUrl?: string;
-    deployedUrl?: string;
-    screenshotUrl?: string;
-    textExplanation?: string;
-  };
-  completedAt?: Date;
-  createdAt: Date;
+export interface IProgressEvidence {
+  type: "github_url" | "deployed_url" | "screenshot" | "text";
+  value: string;
+  submittedAt?: Date;
 }
 
-const progressRecordSchema = new Schema<IProgressRecord>(
+export interface IProgress extends Document {
+  pathwayId: string;
+  stepId: string;
+  learnerId: string;
+  status: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED" | "BLOCKED";
+  evidence?: IProgressEvidence;
+  difficulty?: number;
+  notes?: string;
+  blockedReason?: string;
+  completedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const ProgressSchema = new Schema<IProgress>(
   {
-    pathwayId: {
-      type: String,
-      required: true,
-      index: true,
-    },
-    stepId: {
-      type: String,
-      required: true,
-      index: true,
-    },
-    learnerId: {
-      type: String,
-      index: true,
-    },
+    pathwayId: { type: String, required: true, index: true },
+    stepId: { type: String, required: true, index: true },
+    learnerId: { type: String, required: true, index: true },
     status: {
       type: String,
-      enum: ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'BLOCKED'],
-      required: true,
-    },
-    difficultyRating: {
-      type: Number,
-      min: 1,
-      max: 5,
-    },
-    notes: {
-      type: String,
+      enum: ["NOT_STARTED", "IN_PROGRESS", "COMPLETED", "BLOCKED"],
+      default: "NOT_STARTED",
     },
     evidence: {
-      githubUrl: { type: String },
-      deployedUrl: { type: String },
-      screenshotUrl: { type: String },
-      textExplanation: { type: String },
-    },
-    completedAt: {
-      type: Date,
-    },
-  },
-  {
-    timestamps: true,
-    toJSON: {
-      transform: (_, ret: any) => {
-        ret.id = ret._id;
-        delete ret._id;
-        delete ret.__v;
-        return ret;
+      type: {
+        type: String,
+        enum: ["github_url", "deployed_url", "screenshot", "text"],
       },
+      value: { type: String },
+      submittedAt: { type: Date, default: Date.now },
     },
-  }
+    difficulty: { type: Number, min: 1, max: 5 },
+    notes: { type: String },
+    blockedReason: { type: String },
+    completedAt: { type: Date },
+  },
+  { timestamps: true }
 );
 
-export const ProgressRecord = mongoose.model<IProgressRecord>('ProgressRecord', progressRecordSchema);
+// Compound index so one progress record exists per pathway step
+ProgressSchema.index({ pathwayId: 1, stepId: 1 }, { unique: true });
+
+export const ProgressModel =
+  mongoose.models.Progress ||
+  mongoose.model<IProgress>("Progress", ProgressSchema);

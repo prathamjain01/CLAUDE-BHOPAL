@@ -1,2 +1,100 @@
-// Mock data for frontend development matching API contract
-{}
+{
+  "_id": "pathway_bhopal_demo_01",
+  "learnerId": "learner_bhopal_01",
+  "goal": "Frontend Development",
+  "version": 1,
+  "isActive": true,
+  "totalEstimatedDays": 42,
+  "steps": [
+    {
+      "id": "step_01",
+      "skillId": "skill_js_01",
+      "skillName": "JavaScript Fundamentals",
+      "reason": "You already have basic HTML/CSS knowledge. JavaScript is the critical prerequisite needed to make interfaces interactive before starting React.",
+      "estimatedDays": 10,
+      "resourceIds": ["res_js_01"],
+      "projectId": "proj_js_01",
+      "acceptanceCriteria": [
+        "Create variables, loops, arrays, and functions to calculate totals",
+        "Manipulate the DOM to dynamically display expense items",
+        "Handle user form events and validate numerical input",
+        "Store and retrieve data from browser localStorage"
+      ],
+      "beginnerTip": "Practice writing small 10-line scripts in the browser console before building the project.",
+      "status": "IN_PROGRESS",
+      "order": 1
+    },
+    {
+      "id": "step_02",
+      "skillId": "skill_git_01",
+      "skillName": "Git & GitHub Basics",
+      "reason": "Required to track your code versions, publish projects on GitHub Pages, and share work with local Bhopal/Indore dev communities.",
+      "estimatedDays": 4,
+      "resourceIds": ["res_git_01"],
+      "projectId": "proj_git_01",
+      "acceptanceCriteria": [
+        "Initialize a Git repository and make meaningful commit messages",
+        "Push your project code to a public GitHub repository",
+        "Enable GitHub Pages to generate a live, shareable URL"
+      ],
+      "beginnerTip": "Treat each git commit like a safe checkpoint in a video game.",
+      "status": "NOT_STARTED",
+      "order": 2
+    },
+    {
+      "id": "step_03",
+      "skillId": "skill_react_01",
+      "skillName": "React Component Architecture",
+      "reason": "The most widely used UI library for web development in regional tech hubs and remote roles.",
+      "estimatedDays": 14,
+      "resourceIds": ["res_react_01"],
+      "projectId": "proj_react_01",
+      "acceptanceCriteria": [
+        "Deconstruct a page into reusable JSX components",
+        "Manage interactive state with useState hook",
+        "Handle side-effects and localStorage syncing with useEffect",
+        "Pass props and event callback handlers cleanly"
+      ],
+      "beginnerTip": "Keep components small. One component should do one clear job.",
+      "status": "NOT_STARTED",
+      "order": 3
+    },
+    {
+      "id": "step_04",
+      "skillId": "skill_tailwind_01",
+      "skillName": "Modern CSS & Utility Styling",
+      "reason": "Speeds up UI construction and ensures responsive styling on mobile screens used by learners in Tier-2 regions.",
+      "estimatedDays": 7,
+      "resourceIds": ["res_css_01"],
+      "projectId": "proj_html_css_01",
+      "acceptanceCriteria": [
+        "Style responsive layouts using utility classes",
+        "Implement dark mode and mobile navigation drawer",
+        "Ensure WCAG AA contrast standards for accessibility"
+      ],
+      "beginnerTip": "Design mobile layout first, then expand with md: and lg: breakpoints.",
+      "status": "NOT_STARTED",
+      "order": 4
+    },
+    {
+      "id": "step_05",
+      "skillId": "skill_deploy_01",
+      "skillName": "Production Deployment & Showcase",
+      "reason": "Allows mentors and potential collaborators to test your live working application on any device.",
+      "estimatedDays": 7,
+      "resourceIds": ["res_git_01"],
+      "projectId": "proj_git_01",
+      "acceptanceCriteria": [
+        "Deploy application to Vercel or Netlify with continuous deployment",
+        "Write a descriptive README with project walkthrough GIF and live link",
+        "Ensure page loads in under 2 seconds on mobile data"
+      ],
+      "beginnerTip": "Ask a friend with an Android phone on 4G to test your live link.",
+      "status": "NOT_STARTED",
+      "order": 5
+    }
+  ],
+  "replanHistory": [],
+  "createdAt": "2026-09-15T08:00:00.000Z",
+  "updatedAt": "2026-09-15T08:00:00.000Z"
+}

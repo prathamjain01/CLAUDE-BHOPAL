@@ -1,2 +1,11 @@
-// Mock learner profile data
-{}
+{
+  "id": "learner_bhopal_01",
+  "goal": "Frontend Development",
+  "currentSkills": ["HTML Basics", "Basic CSS"],
+  "device": "laptop",
+  "dailyTimeMinutes": 60,
+  "internetQuality": "broadband",
+  "preferredLanguage": "English",
+  "city": "Bhopal",
+  "priorExposure": "Built simple static webpages in college lab, but never wrote JavaScript or deployed a site."
+}

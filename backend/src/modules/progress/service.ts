@@ -1,108 +1,142 @@
-import { ProgressRecord } from './model.js';
-import { UpdateProgressInput } from './schema.js';
-import { LearningPath } from '../pathways/model.js';
-import { pathwaysService } from '../pathways/service.js';
-import { AppError } from '../../utils/apiResponse.js';
-import { isDbConnected } from '../../config/db.js';
+import { ProgressModel, IProgress } from "./model.js";
+import { UpdateProgressInput } from "./schema.js";
+import { LearningPathModel } from "../pathways/model.js";
 
-const memoryProgress: any[] = [];
+// In-memory fallback for local development / testing without MongoDB
+const inMemoryProgress: Map<string, Record<string, unknown>> = new Map();
 
 export class ProgressService {
+  /**
+   * Update progress for a specific pathway step and sync with pathway model.
+   */
   async updateStepProgress(
     stepId: string,
-    learnerId: string | undefined,
-    data: UpdateProgressInput
-  ): Promise<any> {
-    const pathway = await pathwaysService.getPathwayByIdOrShare(data.pathwayId);
-    if (!pathway) {
-      throw new AppError('Associated pathway not found', 404);
-    }
+    input: UpdateProgressInput
+  ): Promise<{
+    progress: IProgress | Record<string, unknown>;
+    suggestReplan: boolean;
+    replanReason?: string;
+  }> {
+    const key = `${input.pathwayId}_${stepId}`;
+    const completedAt = input.status === "COMPLETED" ? new Date() : undefined;
 
-    const stepIndex = pathway.steps.findIndex((s: any) => s.stepId === stepId);
-    if (stepIndex === -1) {
-      throw new AppError(`Step ${stepId} not found in pathway`, 404);
-    }
-
-    const currentStep = pathway.steps[stepIndex];
-    currentStep.status = data.status;
-    if (data.notes) currentStep.notes = data.notes;
-
-    if (data.status === 'COMPLETED') {
-      currentStep.completedAt = new Date();
-      // Unlock next step
-      if (stepIndex + 1 < pathway.steps.length) {
-        if (pathway.steps[stepIndex + 1].status === 'NOT_STARTED') {
-          pathway.steps[stepIndex + 1].status = 'IN_PROGRESS';
-        }
-        pathway.currentStepIndex = stepIndex + 1;
-      } else {
-        pathway.status = 'COMPLETED';
-      }
-    }
-
-    const recommendReplan =
-      data.status === 'BLOCKED' || (data.difficultyRating !== undefined && data.difficultyRating >= 4);
-
-    // Save progress record
-    const recordPayload = {
-      pathwayId: data.pathwayId,
+    const updatePayload: Record<string, unknown> = {
+      pathwayId: input.pathwayId,
       stepId,
-      learnerId,
-      status: data.status,
-      difficultyRating: data.difficultyRating,
-      notes: data.notes,
-      evidence: data.evidence,
-      completedAt: data.status === 'COMPLETED' ? new Date() : undefined,
-      createdAt: new Date(),
+      learnerId: input.learnerId || "learner_default",
+      status: input.status,
+      difficulty: input.difficulty,
+      notes: input.notes,
+      blockedReason: input.blockedReason,
+      ...(completedAt && { completedAt }),
+      ...(input.evidence && {
+        evidence: {
+          type: input.evidence.type,
+          value: input.evidence.value,
+          submittedAt: new Date(),
+        },
+      }),
     };
 
-    if (isDbConnected()) {
-      await ProgressRecord.create(recordPayload);
-      await LearningPath.findByIdAndUpdate(pathway.id || pathway._id, pathway);
-    } else {
-      memoryProgress.push(recordPayload);
+    let savedRecord: IProgress | Record<string, unknown>;
+
+    try {
+      savedRecord = await ProgressModel.findOneAndUpdate(
+        { pathwayId: input.pathwayId, stepId },
+        { $set: updatePayload },
+        { upsert: true, new: true }
+      );
+    } catch {
+      // In-memory fallback
+      const existing = inMemoryProgress.get(key) || {};
+      const merged = { ...existing, ...updatePayload, updatedAt: new Date() };
+      inMemoryProgress.set(key, merged);
+      savedRecord = merged;
     }
 
-    const totalSteps = pathway.steps.length;
-    const completedCount = pathway.steps.filter((s: any) => s.status === 'COMPLETED').length;
-    const progressPercentage = Math.round((completedCount / totalSteps) * 100);
+    // Sync status with LearningPathModel step
+    try {
+      await LearningPathModel.updateOne(
+        { _id: input.pathwayId, "steps.id": stepId },
+        { $set: { "steps.$.status": input.status } }
+      );
+    } catch {
+      // Ignore if pathway in-memory or not in DB
+    }
+
+    const isBlocked = input.status === "BLOCKED";
+    const isStuckDifficulty = typeof input.difficulty === "number" && input.difficulty >= 4;
+    const suggestReplan = isBlocked || isStuckDifficulty;
 
     return {
-      updatedStep: currentStep,
-      progressPercentage,
-      completedCount,
-      totalSteps,
-      recommendReplan,
-      message: recommendReplan
-        ? 'Progress saved. Since you noted high difficulty or a blocker, you can trigger a pathway re-plan anytime!'
-        : 'Step progress updated successfully.',
+      progress: savedRecord,
+      suggestReplan,
+      ...(suggestReplan && {
+        replanReason: isBlocked
+          ? `Learner is blocked on step ${stepId}: ${input.blockedReason || "encountered difficulty"}`
+          : `Learner reported high difficulty (${input.difficulty}/5) on step ${stepId}`,
+      }),
     };
   }
 
-  async getPathwayProgress(pathwayId: string): Promise<any> {
-    const pathway = await pathwaysService.getPathwayByIdOrShare(pathwayId);
-    if (!pathway) {
-      throw new AppError('Pathway not found', 404);
+  /**
+   * Retrieve all step progress items for a pathway.
+   */
+  async getProgressByPathway(pathwayId: string): Promise<Array<IProgress | Record<string, unknown>>> {
+    try {
+      const records = await ProgressModel.find({ pathwayId });
+      if (records && records.length > 0) return records;
+    } catch {
+      // Fall through to in-memory check
     }
 
-    let records: any[] = [];
-    if (isDbConnected()) {
-      records = await ProgressRecord.find({ pathwayId }).sort({ createdAt: -1 });
-    } else {
-      records = memoryProgress.filter((p) => p.pathwayId === pathwayId);
+    const inMemList: Array<Record<string, unknown>> = [];
+    for (const [key, value] of inMemoryProgress.entries()) {
+      if (key.startsWith(`${pathwayId}_`)) {
+        inMemList.push(value);
+      }
+    }
+    return inMemList;
+  }
+
+  /**
+   * Calculate summary metrics: percentage completed, current step, blockers.
+   */
+  async getProgressSummary(pathwayId: string) {
+    let pathway = null;
+    try {
+      pathway = await LearningPathModel.findById(pathwayId);
+    } catch {
+      // Ignore
     }
 
-    const totalSteps = pathway.steps.length;
-    const completedCount = pathway.steps.filter((s: any) => s.status === 'COMPLETED').length;
-    const progressPercentage = totalSteps > 0 ? Math.round((completedCount / totalSteps) * 100) : 0;
+    const progressRecords = await this.getProgressByPathway(pathwayId);
+    const steps = pathway?.steps || [];
+    const totalSteps = steps.length > 0 ? steps.length : progressRecords.length || 5;
+
+    const completedCount = progressRecords.filter(
+      (r) => (r as { status?: string }).status === "COMPLETED"
+    ).length;
+
+    const blockedRecord = progressRecords.find(
+      (r) => (r as { status?: string }).status === "BLOCKED"
+    );
+
+    const inProgressRecord = progressRecords.find(
+      (r) => (r as { status?: string }).status === "IN_PROGRESS"
+    );
+
+    const completionPercentage =
+      totalSteps > 0 ? Math.round((completedCount / totalSteps) * 100) : 0;
 
     return {
       pathwayId,
       totalSteps,
-      completedCount,
-      progressPercentage,
-      currentStep: pathway.steps[pathway.currentStepIndex] || null,
-      history: records,
+      completedSteps: completedCount,
+      completionPercentage,
+      currentStepId: (inProgressRecord as { stepId?: string })?.stepId || (steps[completedCount]?.id) || "step_01",
+      isBlocked: !!blockedRecord,
+      blockedStepId: (blockedRecord as { stepId?: string })?.stepId || null,
     };
   }
 }

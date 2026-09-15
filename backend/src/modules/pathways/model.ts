@@ -1,161 +1,77 @@
-import mongoose, { Document, Schema } from 'mongoose';
-import crypto from 'crypto';
+import mongoose, { Document, Schema } from "mongoose";
 
 export interface IPathwayStep {
-  stepId: string;
-  skillSlug: string;
+  id: string;
+  skillId?: string;
   skillName: string;
-  category: string;
   reason: string;
-  beginnerTip: string;
   estimatedDays: number;
-  resource: {
-    title: string;
-    url: string;
-    provider: string;
-    cost: string;
-    mobileFriendly: boolean;
-    language: string;
-    durationHours: number;
-  };
-  project?: {
-    slug: string;
-    title: string;
-    description: string;
-    acceptanceCriteria: string[];
-    evidenceRequirements: string[];
-    estimatedHours: number;
-  };
-  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED';
-  completedAt?: Date;
-  notes?: string;
+  resourceIds: string[];
+  projectId?: string | null;
+  acceptanceCriteria: string[];
+  beginnerTip?: string;
+  status: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED" | "BLOCKED";
+  order: number;
 }
 
 export interface ILearningPath extends Document {
-  shareId: string;
-  learnerProfileId?: mongoose.Types.ObjectId;
-  userId?: mongoose.Types.ObjectId;
-  sessionId?: string;
+  learnerId: string;
   goal: string;
-  title: string;
-  overview: string;
-  encouragementMessage: string;
+  version: number;
+  isActive: boolean;
   totalEstimatedDays: number;
-  status: 'ACTIVE' | 'PAUSED' | 'COMPLETED';
-  currentStepIndex: number;
   steps: IPathwayStep[];
+  replanHistory: Array<{
+    version: number;
+    reason: string;
+    rationale: string;
+    timestamp: Date;
+  }>;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const pathwayStepSchema = new Schema<IPathwayStep>(
+const PathwayStepSchema = new Schema<IPathwayStep>(
   {
-    stepId: { type: String, required: true },
-    skillSlug: { type: String, required: true },
+    id: { type: String, required: true },
+    skillId: { type: String },
     skillName: { type: String, required: true },
-    category: { type: String, default: 'General' },
     reason: { type: String, required: true },
-    beginnerTip: { type: String, default: 'Focus on hands-on practice.' },
-    estimatedDays: { type: Number, default: 7 },
-    resource: {
-      title: { type: String, required: true },
-      url: { type: String, required: true },
-      provider: { type: String, required: true },
-      cost: { type: String, default: 'free' },
-      mobileFriendly: { type: Boolean, default: true },
-      language: { type: String, default: 'en' },
-      durationHours: { type: Number, default: 5 },
-    },
-    project: {
-      slug: { type: String },
-      title: { type: String },
-      description: { type: String },
-      acceptanceCriteria: { type: [String], default: [] },
-      evidenceRequirements: { type: [String], default: [] },
-      estimatedHours: { type: Number },
-    },
+    estimatedDays: { type: Number, required: true, default: 7 },
+    resourceIds: [{ type: String }],
+    projectId: { type: String, default: null },
+    acceptanceCriteria: [{ type: String }],
+    beginnerTip: { type: String },
     status: {
       type: String,
-      enum: ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'BLOCKED'],
-      default: 'NOT_STARTED',
+      enum: ["NOT_STARTED", "IN_PROGRESS", "COMPLETED", "BLOCKED"],
+      default: "NOT_STARTED",
     },
-    completedAt: { type: Date },
-    notes: { type: String },
+    order: { type: Number, required: true, default: 1 },
   },
   { _id: false }
 );
 
-const learningPathSchema = new Schema<ILearningPath>(
+const LearningPathSchema = new Schema<ILearningPath>(
   {
-    shareId: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-      default: () => `path_${crypto.randomBytes(4).toString('hex')}`,
-    },
-    learnerProfileId: {
-      type: Schema.Types.ObjectId,
-      ref: 'LearnerProfile',
-      sparse: true,
-      index: true,
-    },
-    userId: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      sparse: true,
-      index: true,
-    },
-    sessionId: {
-      type: String,
-      sparse: true,
-      index: true,
-    },
-    goal: {
-      type: String,
-      required: true,
-    },
-    title: {
-      type: String,
-      required: true,
-    },
-    overview: {
-      type: String,
-      required: true,
-    },
-    encouragementMessage: {
-      type: String,
-      required: true,
-    },
-    totalEstimatedDays: {
-      type: Number,
-      default: 30,
-    },
-    status: {
-      type: String,
-      enum: ['ACTIVE', 'PAUSED', 'COMPLETED'],
-      default: 'ACTIVE',
-    },
-    currentStepIndex: {
-      type: Number,
-      default: 0,
-    },
-    steps: {
-      type: [pathwayStepSchema],
-      default: [],
-    },
-  },
-  {
-    timestamps: true,
-    toJSON: {
-      transform: (_, ret: any) => {
-        ret.id = ret._id;
-        delete ret._id;
-        delete ret.__v;
-        return ret;
+    learnerId: { type: String, required: true, index: true },
+    goal: { type: String, required: true },
+    version: { type: Number, default: 1 },
+    isActive: { type: Boolean, default: true },
+    totalEstimatedDays: { type: Number, default: 30 },
+    steps: [PathwayStepSchema],
+    replanHistory: [
+      {
+        version: { type: Number, required: true },
+        reason: { type: String, required: true },
+        rationale: { type: String, required: true },
+        timestamp: { type: Date, default: Date.now },
       },
-    },
-  }
+    ],
+  },
+  { timestamps: true }
 );
 
-export const LearningPath = mongoose.model<ILearningPath>('LearningPath', learningPathSchema);
+export const LearningPathModel =
+  mongoose.models.LearningPath ||
+  mongoose.model<ILearningPath>("LearningPath", LearningPathSchema);

@@ -1,164 +1,298 @@
-import { queryAI } from './client.js';
+import { callClaude } from "./client.js";
 import {
-  aiPathwayExplanationSchema,
-  AIPathwayExplanation,
-  aiReplanExplanationSchema,
-  AIReplanExplanation,
-  aiToolingAdviceSchema,
-  AIToolingAdvice,
-} from './schemas.js';
-import {
-  buildPathwayExplanationPrompt,
+  buildPathwayGenerationPrompt,
   buildReplanPrompt,
-  buildToolingExplanationPrompt,
-} from './prompts.js';
-import { logger } from '../utils/logger.js';
+  buildExplanationPrompt,
+  LearnerContext,
+  SkillGapContext,
+  ResourceContext,
+  ProjectContext,
+  ReplanContext,
+} from "./prompts.js";
+import {
+  PathwayResponse,
+  PathwayResponseSchema,
+  ReplanResponse,
+  ReplanResponseSchema,
+  ExplanationResponse,
+  ExplanationResponseSchema,
+  parseAndValidateJson,
+} from "./schemas.js";
 
-export class AIService {
+// ---------------------------------------------------------------------------
+// AI Orchestration Service with Deterministic Fallbacks
+// ---------------------------------------------------------------------------
+
+export class AiService {
   /**
-   * Generates or falls back to an encouraging pathway explanation and step breakdown.
+   * Generate an ordered learning pathway using Claude API with schema validation.
+   * Falls back to deterministic generation if Claude API is unavailable or invalid.
    */
-  async explainPathway(
-    learner: {
-      goal: string;
-      priorExposure?: string;
-      currentSkills: string[];
-      availableHoursPerDay: number;
-      device: string;
-      preferredLanguage?: string;
-      city?: string;
-    },
-    steps: Array<{
-      skillSlug: string;
-      skillName: string;
-      prerequisites: string[];
-      resourceTitle?: string;
-      projectTitle?: string;
-    }>
-  ): Promise<AIPathwayExplanation> {
-    const prompt = buildPathwayExplanationPrompt(learner, steps);
-    const rawAiOutput = await queryAI(prompt);
+  async generatePathway(
+    learner: LearnerContext,
+    skillGap: SkillGapContext,
+    resources: ResourceContext[],
+    projects: ProjectContext[]
+  ): Promise<PathwayResponse> {
+    try {
+      const { systemPrompt, userPrompt } = buildPathwayGenerationPrompt(
+        learner,
+        skillGap,
+        resources,
+        projects
+      );
 
-    if (rawAiOutput) {
-      try {
-        const parsedJson = this.extractJson(rawAiOutput);
-        const validated = aiPathwayExplanationSchema.safeParse(parsedJson);
-        if (validated.success) {
-          logger.info('[AI] Successfully generated validated AI pathway explanation.');
-          return validated.data;
+      const response = await callClaude({ systemPrompt, userPrompt });
+      const validated = parseAndValidateJson(response.text, PathwayResponseSchema);
+
+      // Business rule validation: ensure all referenced IDs exist in catalogues
+      const validResourceIds = new Set(resources.map((r) => r.id));
+      const validProjectIds = new Set(projects.map((p) => p.id));
+
+      for (const step of validated.steps) {
+        step.resourceIds = step.resourceIds.filter((id) => validResourceIds.has(id));
+        if (step.projectId && !validProjectIds.has(step.projectId)) {
+          step.projectId = null;
         }
-        logger.warn('[AI] AI response failed Zod schema validation, falling back to deterministic explanation.');
-      } catch (parseError) {
-        logger.warn('[AI] Failed to parse JSON from AI response, using deterministic fallback.');
       }
-    }
 
-    // Deterministic fallback
-    return this.generateDeterministicPathwayExplanation(learner, steps);
+      return validated;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[AI Service] Claude generation failed (${msg}). Using deterministic fallback.`);
+      return this.generateDeterministicPathway(learner, skillGap, resources, projects);
+    }
   }
 
   /**
-   * Generates or falls back to a re-planning explanation.
+   * Re-plan an existing pathway based on learner progress, difficulty, or constraints.
    */
-  async explainReplan(
-    learner: {
+  async replanPathway(
+    currentPathway: {
       goal: string;
-      availableHoursPerDay: number;
+      steps: Array<{
+        id: string;
+        skillName: string;
+        status: string;
+        reason: string;
+        estimatedDays: number;
+      }>;
     },
-    context: {
-      completedSteps: string[];
-      currentBlockedStep?: string;
-      learnerFeedback: string;
-      remainingSteps: string[];
-    }
-  ): Promise<AIReplanExplanation> {
-    const prompt = buildReplanPrompt(learner, context);
-    const rawAiOutput = await queryAI(prompt);
+    replanContext: ReplanContext,
+    learner: LearnerContext,
+    resources: ResourceContext[],
+    projects: ProjectContext[]
+  ): Promise<ReplanResponse> {
+    try {
+      const { systemPrompt, userPrompt } = buildReplanPrompt(
+        currentPathway,
+        replanContext,
+        learner,
+        resources,
+        projects
+      );
 
-    if (rawAiOutput) {
-      try {
-        const parsedJson = this.extractJson(rawAiOutput);
-        const validated = aiReplanExplanationSchema.safeParse(parsedJson);
-        if (validated.success) {
-          logger.info('[AI] Successfully generated validated AI replan explanation.');
-          return validated.data;
+      const response = await callClaude({ systemPrompt, userPrompt });
+      const validated = parseAndValidateJson(response.text, ReplanResponseSchema);
+
+      return validated;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[AI Service] Claude replan failed (${msg}). Using deterministic fallback.`);
+      return this.generateDeterministicReplan(
+        currentPathway,
+        replanContext,
+        learner,
+        resources,
+        projects
+      );
+    }
+  }
+
+  /**
+   * Generate a beginner-friendly explanation of a skill.
+   */
+  async getExplanation(
+    skillName: string,
+    learnerContext: { preferredLanguage: string; currentSkills: string[] }
+  ): Promise<ExplanationResponse> {
+    try {
+      const { systemPrompt, userPrompt } = buildExplanationPrompt(
+        skillName,
+        learnerContext
+      );
+
+      const response = await callClaude({ systemPrompt, userPrompt, maxTokens: 1024 });
+      return parseAndValidateJson(response.text, ExplanationResponseSchema);
+    } catch (err: unknown) {
+      console.warn(`[AI Service] Explanation generation failed. Using default explanation.`);
+      return {
+        skillName,
+        explanation: `${skillName} is an essential technology concept required to achieve your goal.`,
+        realWorldAnalogy: "Think of it like learning the basic building blocks before constructing a house.",
+        whyItMatters: `Mastering ${skillName} enables you to build functional, interactive projects independently.`,
+        hindiExplanation: `${skillName} ek mahatvapurna skill hai jo aapke goal ke liye zaroori hai.`,
+      };
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Deterministic Fallbacks (Mandated by SRS FR-04 & Error Handling)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Generates a deterministic pathway sorted topologically by prerequisites.
+   */
+  generateDeterministicPathway(
+    learner: LearnerContext,
+    skillGap: SkillGapContext,
+    resources: ResourceContext[],
+    projects: ProjectContext[]
+  ): PathwayResponse {
+    const missing = skillGap.missingSkills.length > 0
+      ? skillGap.missingSkills
+      : skillGap.requiredSkills;
+
+    // Topological sorting based on prerequisites
+    const orderedSkills: string[] = [];
+    const visited = new Set<string>();
+
+    const visit = (skill: string) => {
+      if (visited.has(skill)) return;
+      const prereqs = skillGap.prerequisites[skill] || [];
+      for (const prereq of prereqs) {
+        if (missing.includes(prereq)) {
+          visit(prereq);
         }
-      } catch {
-        logger.warn('[AI] Could not parse AI replan response, using fallback.');
       }
-    }
-
-    return {
-      summaryOfChanges: `We adjusted your upcoming schedule to ease the difficulty on your current topic (${context.currentBlockedStep || 'current step'}) and spread remaining milestones comfortably over your available ${learner.availableHoursPerDay} hour(s) per day.`,
-      reasonForAdjustment: `You indicated difficulty or a schedule shift. Breaking complex topics into smaller daily tasks prevents burnout.`,
-      updatedPaceAdvice: `Dedicate 30-45 minutes to active practice and rest your mind. Review the fundamentals before proceeding.`,
-      encouragement: `Every developer hits roadblocks. Taking a step back and practicing with hands-on mini projects will build your confidence!`,
+      visited.add(skill);
+      orderedSkills.push(skill);
     };
-  }
 
-  /**
-   * Generates beginner-friendly tooling guidance.
-   */
-  async explainTooling(topic: string, level = 'beginner'): Promise<AIToolingAdvice> {
-    const prompt = buildToolingExplanationPrompt(topic, level);
-    const rawAiOutput = await queryAI(prompt);
-
-    if (rawAiOutput) {
-      try {
-        const parsedJson = this.extractJson(rawAiOutput);
-        const validated = aiToolingAdviceSchema.safeParse(parsedJson);
-        if (validated.success) {
-          return validated.data;
-        }
-      } catch {
-        // Fallback
-      }
+    for (const skill of missing) {
+      visit(skill);
     }
 
+    const steps = orderedSkills.map((skillName, idx) => {
+      const stepNum = String(idx + 1).padStart(2, "0");
+      const matchedResources = resources
+        .filter((r) => r.skillId.toLowerCase() === skillName.toLowerCase() || r.title.toLowerCase().includes(skillName.toLowerCase()))
+        .map((r) => r.id);
+
+      const matchedProject = projects.find((p) =>
+        p.skillIds.some((s) => s.toLowerCase() === skillName.toLowerCase())
+      );
+
+      // Estimate duration based on daily time (1 hr/day -> approx 7 days for standard skill)
+      const dailyHours = Math.max(0.5, learner.dailyTimeMinutes / 60);
+      const estDays = Math.max(3, Math.round(10 / dailyHours));
+
+      return {
+        id: `step_${stepNum}`,
+        skillName,
+        reason: idx === 0
+          ? `Foundational starting skill required before progressing to advanced topics.`
+          : `Direct prerequisite for subsequent milestones in ${learner.goal}.`,
+        estimatedDays: estDays,
+        resourceIds: matchedResources.length > 0 ? [matchedResources[0]] : [],
+        projectId: matchedProject ? matchedProject.id : null,
+        acceptanceCriteria: matchedProject
+          ? matchedProject.acceptanceCriteria
+          : [`Complete hands-on exercise demonstrating ${skillName}`, `Push code to GitHub`],
+        beginnerTip: `Take notes and build small test snippets as you practice.`,
+        status: idx === 0 ? ("IN_PROGRESS" as const) : ("NOT_STARTED" as const),
+      };
+    });
+
+    const totalEstimatedDays = steps.reduce((sum, s) => sum + s.estimatedDays, 0);
+
     return {
-      title: topic,
-      plainLanguageExplanation: `In web development, ${topic} is an essential tool that helps you create, organize, and test your code reliably on your computer.`,
-      commonBeginnerMistakes: [
-        'Trying to memorize every single command or flag instead of referencing documentation.',
-        'Working without saving files regularly or forgetting to check browser error logs.',
+      goal: learner.goal,
+      totalEstimatedDays,
+      steps: steps.length > 0 ? steps : [
+        {
+          id: "step_01",
+          skillName: learner.goal,
+          reason: "Core skill for your selected target goal.",
+          estimatedDays: 14,
+          resourceIds: resources.length > 0 ? [resources[0].id] : [],
+          projectId: projects.length > 0 ? projects[0].id : null,
+          acceptanceCriteria: ["Build sample project", "Document learning in notes"],
+          beginnerTip: "Start with 30-45 minutes daily consistency.",
+          status: "IN_PROGRESS" as const,
+        },
       ],
-      quickPracticalStep: `Open your tool, create a small sample folder on your desktop, and run your first basic test command to verify everything is working.`,
     };
   }
 
-  private extractJson(text: string): any {
-    // Strip markdown code fences if present
-    const cleaned = text
-      .replace(/```json\s*/gi, '')
-      .replace(/```\s*$/g, '')
-      .trim();
-    return JSON.parse(cleaned);
-  }
-
-  private generateDeterministicPathwayExplanation(
-    learner: {
+  /**
+   * Generates a deterministic replan response.
+   */
+  generateDeterministicReplan(
+    currentPathway: {
       goal: string;
-      availableHoursPerDay: number;
-      device: string;
-      currentSkills: string[];
+      steps: Array<{
+        id: string;
+        skillName: string;
+        status: string;
+        reason: string;
+        estimatedDays: number;
+      }>;
     },
-    steps: Array<{ skillSlug: string; skillName: string; prerequisites: string[] }>
-  ): AIPathwayExplanation {
-    const paceDaysPerStep = Math.max(3, Math.round(15 / Math.max(learner.availableHoursPerDay, 1)));
+    replanContext: ReplanContext,
+    learner: LearnerContext,
+    resources: ResourceContext[],
+    projects: ProjectContext[]
+  ): ReplanResponse {
+    const updatedSteps = currentPathway.steps.map((step) => {
+      if (step.id === replanContext.currentStepId) {
+        if (replanContext.reason === "completed") {
+          return { ...step, status: "COMPLETED" as const };
+        } else if (replanContext.reason === "stuck") {
+          return {
+            ...step,
+            status: "BLOCKED" as const,
+            estimatedDays: step.estimatedDays + 3,
+            beginnerTip: "Break down into smaller 15-minute concepts and review prerequisites.",
+          };
+        } else if (replanContext.reason === "need_more_practice") {
+          return {
+            ...step,
+            status: "IN_PROGRESS" as const,
+            estimatedDays: step.estimatedDays + 4,
+            beginnerTip: "Practice building a mini clone before proceeding to the next step.",
+          };
+        }
+      }
+      return step;
+    });
+
+    let rationale = `Re-planned pathway based on: ${replanContext.reason}.`;
+    if (replanContext.reason === "completed") {
+      rationale = `Great job completing step ${replanContext.currentStepId}! Pathway updated to unlock subsequent steps.`;
+    } else if (replanContext.reason === "stuck") {
+      rationale = `Identified roadblock on step ${replanContext.currentStepId}. Added additional practice time and support tips.`;
+    }
+
+    const totalEstimatedDays = updatedSteps.reduce((sum, s) => sum + s.estimatedDays, 0);
 
     return {
-      overview: `Based on your goal of ${learner.goal}, your device (${learner.device}), and your commitment of ${learner.availableHoursPerDay} hr/day, here is your step-by-step roadmap. We bypassed topics you have already mastered and ordered each step so prerequisites are solid before moving forward.`,
-      stepExplanations: steps.map((s, index) => ({
-        skillSlug: s.skillSlug,
-        whyNeeded: index === 0
-          ? `This is your essential starting foundation toward ${learner.goal}.`
-          : `Building on your earlier skills, ${s.skillName} unlocks key capabilities needed for modern development.`,
-        beginnerTip: `Spend 70% of your time coding along with the tutorials and completing the checkpoint mini-project rather than passively watching.`,
-        estimatedPace: `${paceDaysPerStep} days at ${learner.availableHoursPerDay} hr/day`,
+      rationale,
+      goal: currentPathway.goal,
+      totalEstimatedDays,
+      steps: updatedSteps.map((s) => ({
+        id: s.id,
+        skillName: s.skillName,
+        reason: s.reason,
+        estimatedDays: s.estimatedDays,
+        resourceIds: [],
+        projectId: null,
+        acceptanceCriteria: ["Demonstrate mastery of core concepts"],
+        beginnerTip: "Practice consistently each day.",
+        status: (s.status as "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED" | "BLOCKED") || "NOT_STARTED",
       })),
-      encouragementMessage: `Consistency is more important than speed. Even ${learner.availableHoursPerDay} focused hour each day will build tangible, project-backed tech skills!`,
     };
   }
 }
 
-export const aiService = new AIService();
+export const aiService = new AiService();
