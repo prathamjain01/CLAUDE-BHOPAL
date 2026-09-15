@@ -1,0 +1,1 @@
+// Progress validation schema (Zod)

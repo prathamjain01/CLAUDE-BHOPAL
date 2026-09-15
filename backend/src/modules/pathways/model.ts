@@ -1,0 +1,1 @@
+// Pathway model (Mongoose schema)

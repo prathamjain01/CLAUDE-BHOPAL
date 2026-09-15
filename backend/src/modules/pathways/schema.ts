@@ -1,0 +1,1 @@
+// Pathway validation schema (Zod)

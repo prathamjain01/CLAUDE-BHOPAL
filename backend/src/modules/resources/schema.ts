@@ -1,0 +1,1 @@
+// Resource validation schema (Zod)

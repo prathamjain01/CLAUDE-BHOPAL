@@ -1,0 +1,1 @@
+// WorkCategoryCard component
