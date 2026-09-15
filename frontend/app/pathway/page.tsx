@@ -40,6 +40,7 @@ export default function PathwayPage() {
     encouragement: string;
   } | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [showClaudePrompt, setShowClaudePrompt] = useState(false);
 
   // Mentor Review State
   const [showMentorReview, setShowMentorReview] = useState(false);
@@ -227,7 +228,6 @@ export default function PathwayPage() {
   const resources = nextMove.resources || [];
   const claudePrompt = nextMove.claudePrompt;
   const project = nextMove.project;
-  const [showClaudePrompt, setShowClaudePrompt] = useState(false);
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors">
