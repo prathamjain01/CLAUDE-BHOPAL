@@ -45,38 +45,121 @@
 }
 
 @layer base {
+  :root {
+    color-scheme: light dark;
+  }
+
+  /* Dark mode (default) */
+  .dark {
+    --bg-primary: #0a0a0a;
+    --bg-secondary: #111111;
+    --bg-tertiary: #1a1a1a;
+    --bg-card: #141414;
+    --bg-hover: #1f1f1f;
+    --text-primary: #ffffff;
+    --text-secondary: #a1a1aa;
+    --text-muted: #71717a;
+    --border-primary: #27272a;
+    --border-secondary: #3f3f46;
+    --accent: #f97316;
+    --accent-hover: #ea580c;
+    --accent-muted: rgba(249, 115, 22, 0.1);
+    --success: #22c55e;
+    --success-muted: rgba(34, 197, 94, 0.1);
+    --error: #ef4444;
+    --error-muted: rgba(239, 68, 68, 0.1);
+    --warning: #eab308;
+    --info: #3b82f6;
+    --info-muted: rgba(59, 130, 246, 0.1);
+  }
+
+  /* Light mode */
+  .light {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f9fafb;
+    --bg-tertiary: #f3f4f6;
+    --bg-card: #ffffff;
+    --bg-hover: #f3f4f6;
+    --text-primary: #111827;
+    --text-secondary: #4b5563;
+    --text-muted: #9ca3af;
+    --border-primary: #e5e7eb;
+    --border-secondary: #d1d5db;
+    --accent: #ea580c;
+    --accent-hover: #c2410c;
+    --accent-muted: rgba(234, 88, 12, 0.1);
+    --success: #16a34a;
+    --success-muted: rgba(22, 163, 74, 0.1);
+    --error: #dc2626;
+    --error-muted: rgba(220, 38, 38, 0.1);
+    --warning: #ca8a04;
+    --info: #2563eb;
+    --info-muted: rgba(37, 99, 235, 0.1);
+  }
+
   html, body {
     width: 100%;
     min-height: 100%;
     margin: 0;
     padding: 0;
-    background-color: #080808;
-    color: #F5F5F7;
     font-family: var(--font-inter);
-    color-scheme: dark;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
-  
+
+  .dark body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+  }
+
+  .light body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+  }
+
   body {
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
   }
-
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-  .pt-safe {
-    padding-top: env(safe-area-inset-top, 0px);
-  }
-  
-  main > :first-child {
-    margin-top: 0 !important;
-  }
-  main > :last-child {
-    margin-bottom: 0 !important;
-  }
 }
 
-/* Custom font typography utilities matching Stitch specifications */
+/* Theme-aware utility classes */
+.theme-bg {
+  background-color: var(--bg-primary);
+}
+
+.theme-bg-secondary {
+  background-color: var(--bg-secondary);
+}
+
+.theme-bg-card {
+  background-color: var(--bg-card);
+}
+
+.theme-text {
+  color: var(--text-primary);
+}
+
+.theme-text-secondary {
+  color: var(--text-secondary);
+}
+
+.theme-text-muted {
+  color: var(--text-muted);
+}
+
+.theme-border {
+  border-color: var(--border-primary);
+}
+
+.theme-accent {
+  color: var(--accent);
+}
+
+.theme-accent-bg {
+  background-color: var(--accent);
+}
+
+/* Custom font typography utilities */
 .font-label-code {
   font-family: var(--font-mono);
   font-size: 12px;
@@ -154,23 +237,6 @@
   line-height: 24px;
   letter-spacing: -0.01em;
   font-weight: 600;
-}
-
-/* Material Symbols font utility */
-.material-symbols-outlined {
-  font-family: 'Material Symbols Outlined';
-  font-weight: normal;
-  font-style: normal;
-  font-size: 24px;
-  line-height: 1;
-  letter-spacing: normal;
-  text-transform: none;
-  display: inline-block;
-  white-space: nowrap;
-  word-wrap: normal;
-  direction: ltr;
-  -webkit-font-feature-settings: 'liga';
-  -webkit-font-smoothing: antialiased;
 }
 
 ::-webkit-scrollbar {

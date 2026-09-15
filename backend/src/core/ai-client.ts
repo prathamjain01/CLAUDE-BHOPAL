@@ -14,7 +14,7 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const GEMINI_MODEL = "gemini-1.5-flash";
+const GEMINI_MODEL = "gemini-3.6-flash";
 const MAX_RETRIES = 2;
 
 let geminiClient: GoogleGenerativeAI | null = null;
@@ -234,4 +234,129 @@ Write a celebration message:`,
   }
 
   return response.text.trim();
+}
+
+// =============================================================================
+// CUSTOM GOAL - AI-Generated Learning Path
+// =============================================================================
+
+export interface CustomSkill {
+  id: string;
+  name: string;
+  description: string;
+  estimatedHours: number;
+  order: number;
+}
+
+export interface CustomResource {
+  title: string;
+  provider: string;
+  url: string;
+  type: string;
+  durationMinutes: number;
+}
+
+export interface CustomProject {
+  title: string;
+  description: string;
+  estimatedHours: number;
+  acceptanceCriteria: string[];
+  starterHint: string;
+}
+
+export interface CustomLearningPath {
+  goal: string;
+  skills: CustomSkill[];
+  resources: Record<string, CustomResource>;
+  projects: Record<string, CustomProject>;
+  aiGenerated: boolean;
+}
+
+/**
+ * Generate a custom learning path for a user-defined goal using AI
+ */
+export async function generateCustomLearningPath(
+  customGoal: string,
+  currentSkills: string[],
+  background?: string,
+  dailyMinutes: number = 60
+): Promise<CustomLearningPath | null> {
+  const response = await callAI({
+    systemPrompt: `You are PathPilot, an expert learning path designer. Create a personalized learning roadmap.
+
+CRITICAL RULES:
+1. Only include FREE resources (freeCodeCamp, YouTube, MDN, Kaggle, official docs, etc.)
+2. Each skill must have a practical mini-project to prove competency
+3. Order skills from foundational to advanced (prerequisites first)
+4. Be realistic about time estimates
+5. Keep it focused - 5-8 skills maximum for a clear path
+
+Output ONLY valid JSON in this exact format:
+{
+  "skills": [
+    {
+      "id": "skill-slug",
+      "name": "Skill Name",
+      "description": "What learner will be able to do",
+      "estimatedHours": 15,
+      "order": 1
+    }
+  ],
+  "resources": {
+    "skill-slug": {
+      "title": "Resource Title",
+      "provider": "freeCodeCamp",
+      "url": "https://...",
+      "type": "course",
+      "durationMinutes": 180
+    }
+  },
+  "projects": {
+    "skill-slug": {
+      "title": "Project Name",
+      "description": "Build X that does Y",
+      "estimatedHours": 4,
+      "acceptanceCriteria": ["criterion 1", "criterion 2", "criterion 3"],
+      "starterHint": "Start by..."
+    }
+  }
+}`,
+
+    userPrompt: `Create a personalized learning path for this learner:
+
+GOAL: ${customGoal}
+
+CURRENT SKILLS: ${currentSkills.length > 0 ? currentSkills.join(", ") : "Complete beginner"}
+
+${background ? `BACKGROUND: ${background}` : ""}
+
+DAILY TIME: ${dailyMinutes} minutes
+
+Create a focused, practical learning path with 5-8 skills. Output JSON only, no other text.`,
+    maxTokens: 4096,
+  });
+
+  if (!response.success) {
+    console.error("[AI] Failed to generate custom learning path");
+    return null;
+  }
+
+  try {
+    // Extract JSON from response
+    const jsonMatch = response.text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        goal: customGoal,
+        skills: parsed.skills || [],
+        resources: parsed.resources || {},
+        projects: parsed.projects || {},
+        aiGenerated: true,
+      };
+    }
+  } catch (err) {
+    console.error("[AI] Failed to parse custom learning path JSON:", err);
+  }
+
+  return null;
 }

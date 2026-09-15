@@ -101,6 +101,8 @@ router.post("/next-move", async (req: Request, res: Response) => {
       dailyMinutes: req.body.dailyMinutes || 60,
       device: req.body.device || "laptop",
       name: req.body.name,
+      isCustomGoal: req.body.isCustomGoal || false,
+      background: req.body.background,
     };
 
     const nextMove = await nextBestActionService.getNextMove(input);
@@ -138,6 +140,8 @@ router.post("/learner/start", async (req: Request, res: Response) => {
       dailyMinutes: req.body.dailyMinutes || 60,
       device: req.body.device || "laptop",
       name: req.body.name,
+      isCustomGoal: req.body.isCustomGoal || false,
+      background: req.body.background,
     };
 
     const { learnerState, nextMove } = await checkpointService.initializeLearner(
@@ -147,7 +151,9 @@ router.post("/learner/start", async (req: Request, res: Response) => {
 
     res.status(201).json({
       success: true,
-      message: "Learning session started! Here's your first move.",
+      message: input.isCustomGoal
+        ? "AI has created your personalized learning path!"
+        : "Learning session started! Here's your first move.",
       data: {
         learnerId,
         learnerState,
