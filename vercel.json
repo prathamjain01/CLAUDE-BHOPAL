@@ -7,21 +7,19 @@
     "backend": {
       "root": "backend",
       "framework": "express",
-      "entrypoint": "api/index.ts"
+      "entrypoint": "api/index:default"
     }
   },
   "rewrites": [
     {
       "source": "/api/(.*)",
       "destination": {
-        "type": "service",
         "service": "backend"
       }
     },
     {
       "source": "/(.*)",
       "destination": {
-        "type": "service",
         "service": "frontend"
       }
     }
