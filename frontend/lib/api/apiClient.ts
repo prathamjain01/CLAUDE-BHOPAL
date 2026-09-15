@@ -335,3 +335,53 @@ export async function getWorkOpportunities(goal?: string, location?: string): Pr
   const queryString = params.toString();
   return apiCall(`/opportunities${queryString ? `?${queryString}` : ""}`);
 }
+
+// =============================================================================
+// QUIZ VERIFICATION SYSTEM
+// =============================================================================
+
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+}
+
+export interface Quiz {
+  skillId: string;
+  skillName: string;
+  passingScore: number;
+  totalQuestions: number;
+  questions: QuizQuestion[];
+}
+
+export interface QuizResult {
+  score: number;
+  passed: boolean;
+  passingScore: number;
+  results: Array<{ correct: boolean; explanation: string }>;
+  message: string;
+}
+
+// Get quiz for a skill
+export async function getQuiz(skillId: string, skillName?: string): Promise<Quiz> {
+  const params = skillName ? `?skillName=${encodeURIComponent(skillName)}` : "";
+  return apiCall(`/quiz/${encodeURIComponent(skillId)}${params}`);
+}
+
+// Submit quiz answers
+export async function submitQuiz(
+  skillId: string,
+  learnerId: string,
+  answers: number[]
+): Promise<QuizResult> {
+  return apiCall(`/quiz/${encodeURIComponent(skillId)}/submit`, {
+    method: "POST",
+    body: JSON.stringify({ learnerId, answers }),
+  });
+}
+
+// Check if learner has passed quiz
+export async function hasPassedQuiz(skillId: string, learnerId: string): Promise<boolean> {
+  const result = await apiCall<{ hasPassed: boolean }>(`/quiz/${encodeURIComponent(skillId)}/status/${learnerId}`);
+  return result.hasPassed;
+}

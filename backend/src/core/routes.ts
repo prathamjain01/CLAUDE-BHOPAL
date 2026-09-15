@@ -512,4 +512,99 @@ router.get("/opportunities", (req: Request, res: Response) => {
   });
 });
 
+// =============================================================================
+// QUIZ VERIFICATION SYSTEM
+// =============================================================================
+
+import { quizService } from "./quiz-system.js";
+
+/**
+ * GET /api/quiz/:skillId
+ * Get quiz questions for a skill
+ */
+router.get("/quiz/:skillId", (req: Request, res: Response) => {
+  const skillId = req.params.skillId as string;
+  const skillName = req.query.skillName as string | undefined;
+
+  const quiz = quizService.getQuiz(skillId, skillName);
+
+  // Return questions without correct answers (client-side shouldn't know answers)
+  const questionsWithoutAnswers = quiz.questions.map((q) => ({
+    id: q.id,
+    question: q.question,
+    options: q.options,
+  }));
+
+  res.json({
+    success: true,
+    data: {
+      skillId: quiz.skillId,
+      skillName: quiz.skillName,
+      passingScore: quiz.passingScore,
+      totalQuestions: quiz.questions.length,
+      questions: questionsWithoutAnswers,
+    },
+  });
+});
+
+/**
+ * POST /api/quiz/:skillId/submit
+ * Submit quiz answers and get results
+ */
+router.post("/quiz/:skillId/submit", (req: Request, res: Response) => {
+  try {
+    const skillId = req.params.skillId as string;
+    const { learnerId, answers } = req.body;
+
+    if (!learnerId || !answers || !Array.isArray(answers)) {
+      res.status(400).json({
+        success: false,
+        message: "learnerId and answers array are required",
+      });
+      return;
+    }
+
+    const result = quizService.submitQuiz(learnerId, skillId, answers);
+
+    res.json({
+      success: true,
+      data: {
+        score: result.score,
+        passed: result.passed,
+        passingScore: quizService.getQuiz(skillId).passingScore,
+        results: result.results,
+        message: result.passed
+          ? "Congratulations! You passed the quiz and proved your knowledge!"
+          : "Keep learning! Review the explanations and try again.",
+      },
+    });
+  } catch (error) {
+    console.error("[API] Error submitting quiz:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to submit quiz",
+    });
+  }
+});
+
+/**
+ * GET /api/quiz/:skillId/status/:learnerId
+ * Check if learner has passed the quiz
+ */
+router.get("/quiz/:skillId/status/:learnerId", (req: Request, res: Response) => {
+  const skillId = req.params.skillId as string;
+  const learnerId = req.params.learnerId as string;
+
+  const hasPassed = quizService.hasPassedQuiz(learnerId, skillId);
+
+  res.json({
+    success: true,
+    data: {
+      skillId,
+      learnerId,
+      hasPassed,
+    },
+  });
+});
+
 export default router;

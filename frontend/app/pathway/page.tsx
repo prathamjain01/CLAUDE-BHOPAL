@@ -14,12 +14,16 @@ import {
   getReviewStatus,
   simulateReview,
   getWorkOpportunities,
+  getQuiz,
+  submitQuiz,
   type LearnerState,
   type ProgressResponse,
   type NextMoveResponse,
   type Mentor,
   type MentorReview,
   type WorkOpportunity,
+  type Quiz,
+  type QuizResult,
 } from "@/lib/api/apiClient";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -52,6 +56,14 @@ export default function PathwayPage() {
   // Work Opportunities State
   const [showOpportunities, setShowOpportunities] = useState(false);
   const [opportunities, setOpportunities] = useState<WorkOpportunity[]>([]);
+
+  // Quiz State
+  const [showQuizModal, setShowQuizModal] = useState(false);
+  const [quiz, setQuiz] = useState<Quiz | null>(null);
+  const [quizAnswers, setQuizAnswers] = useState<number[]>([]);
+  const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
+  const [quizLoading, setQuizLoading] = useState(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   useEffect(() => {
     const learnerId = getStoredLearnerId();
@@ -194,6 +206,68 @@ export default function PathwayPage() {
   const openOpportunities = async () => {
     await loadOpportunities();
     setShowOpportunities(true);
+  };
+
+  // Start quiz for skill verification
+  const startQuiz = async () => {
+    if (!nextMove?.nextMove?.skill) return;
+
+    setQuizLoading(true);
+    try {
+      const skillId = nextMove.nextMove.skill.id;
+      const skillName = nextMove.nextMove.skill.name;
+      const quizData = await getQuiz(skillId, skillName);
+      setQuiz(quizData);
+      setQuizAnswers(new Array(quizData.totalQuestions).fill(-1));
+      setCurrentQuestionIndex(0);
+      setQuizResult(null);
+      setShowQuizModal(true);
+    } catch {
+      setError("Failed to load quiz");
+    } finally {
+      setQuizLoading(false);
+    }
+  };
+
+  // Handle quiz answer selection
+  const handleQuizAnswer = (questionIndex: number, answerIndex: number) => {
+    const newAnswers = [...quizAnswers];
+    newAnswers[questionIndex] = answerIndex;
+    setQuizAnswers(newAnswers);
+  };
+
+  // Submit quiz
+  const handleQuizSubmit = async () => {
+    const learnerId = getStoredLearnerId();
+    if (!learnerId || !quiz) return;
+
+    setQuizLoading(true);
+    try {
+      const result = await submitQuiz(quiz.skillId, learnerId, quizAnswers);
+      setQuizResult(result);
+
+      // If passed, mark skill as completed
+      if (result.passed) {
+        setTimeout(async () => {
+          await handleStatusUpdate("COMPLETED");
+          setShowQuizModal(false);
+          setQuiz(null);
+          setQuizResult(null);
+        }, 2000);
+      }
+    } catch {
+      setError("Failed to submit quiz");
+    } finally {
+      setQuizLoading(false);
+    }
+  };
+
+  // Close quiz and retry
+  const closeQuizAndRetry = () => {
+    setShowQuizModal(false);
+    setQuiz(null);
+    setQuizResult(null);
+    setQuizAnswers([]);
   };
 
   if (loading) {
@@ -502,11 +576,11 @@ export default function PathwayPage() {
                     I'm Stuck
                   </button>
                   <button
-                    onClick={() => handleStatusUpdate("COMPLETED")}
-                    disabled={updating}
+                    onClick={startQuiz}
+                    disabled={quizLoading}
                     className="flex-1 py-3 bg-[var(--success)] hover:opacity-90 disabled:opacity-50 text-white rounded-xl font-semibold transition"
                   >
-                    {updating ? "Verifying..." : "I've Completed This!"}
+                    {quizLoading ? "Loading Quiz..." : "Take Quiz to Complete"}
                   </button>
                 </div>
               </div>
@@ -812,6 +886,170 @@ export default function PathwayPage() {
               </div>
             ) : (
               <p className="text-sm text-[var(--text-muted)]">Loading opportunities...</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Quiz Verification Modal */}
+      {showQuizModal && quiz && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="bg-[var(--bg-card)] rounded-2xl p-6 max-w-2xl w-full border border-[var(--border-primary)] max-h-[90vh] overflow-y-auto">
+            {!quizResult ? (
+              <>
+                {/* Quiz Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-xl font-bold">Skill Verification Quiz</h3>
+                    <p className="text-sm text-[var(--text-muted)]">
+                      {quiz.skillName} • {quiz.totalQuestions} questions • Pass: {quiz.passingScore}%
+                    </p>
+                  </div>
+                  <button
+                    onClick={closeQuizAndRetry}
+                    className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Progress */}
+                <div className="flex gap-1 mb-6">
+                  {quiz.questions.map((_, i) => (
+                    <div
+                      key={i}
+                      className={`h-2 flex-1 rounded-full transition ${
+                        quizAnswers[i] !== -1
+                          ? "bg-[var(--accent)]"
+                          : i === currentQuestionIndex
+                          ? "bg-[var(--accent)]/50"
+                          : "bg-[var(--bg-tertiary)]"
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                {/* Current Question */}
+                <div className="mb-6">
+                  <p className="text-sm text-[var(--text-muted)] mb-2">
+                    Question {currentQuestionIndex + 1} of {quiz.totalQuestions}
+                  </p>
+                  <h4 className="text-lg font-medium mb-4">
+                    {quiz.questions[currentQuestionIndex].question}
+                  </h4>
+
+                  <div className="space-y-3">
+                    {quiz.questions[currentQuestionIndex].options.map((option, optIndex) => (
+                      <button
+                        key={optIndex}
+                        onClick={() => handleQuizAnswer(currentQuestionIndex, optIndex)}
+                        className={`w-full p-4 rounded-xl border-2 text-left transition ${
+                          quizAnswers[currentQuestionIndex] === optIndex
+                            ? "border-[var(--accent)] bg-[var(--accent-muted)]"
+                            : "border-[var(--border-primary)] hover:border-[var(--border-secondary)]"
+                        }`}
+                      >
+                        <span className="font-medium mr-3">
+                          {String.fromCharCode(65 + optIndex)}.
+                        </span>
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Navigation */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
+                    disabled={currentQuestionIndex === 0}
+                    className="flex-1 py-3 border border-[var(--border-primary)] rounded-xl disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+                  {currentQuestionIndex < quiz.totalQuestions - 1 ? (
+                    <button
+                      onClick={() => setCurrentQuestionIndex(currentQuestionIndex + 1)}
+                      disabled={quizAnswers[currentQuestionIndex] === -1}
+                      className="flex-1 py-3 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white rounded-xl font-semibold"
+                    >
+                      Next
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleQuizSubmit}
+                      disabled={quizAnswers.some((a) => a === -1) || quizLoading}
+                      className="flex-1 py-3 bg-[var(--success)] hover:opacity-90 disabled:opacity-50 text-white rounded-xl font-semibold"
+                    >
+                      {quizLoading ? "Submitting..." : "Submit Quiz"}
+                    </button>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Quiz Results */}
+                <div className="text-center py-8">
+                  <div className="text-6xl mb-4">
+                    {quizResult.passed ? "🎉" : "📚"}
+                  </div>
+                  <h3 className="text-2xl font-bold mb-2">
+                    {quizResult.passed ? "Congratulations!" : "Keep Learning!"}
+                  </h3>
+                  <p className="text-[var(--text-secondary)] mb-6">{quizResult.message}</p>
+
+                  <div className="inline-flex items-center gap-4 px-6 py-4 bg-[var(--bg-tertiary)] rounded-xl mb-6">
+                    <div className="text-center">
+                      <p className="text-3xl font-bold text-[var(--accent)]">{quizResult.score}%</p>
+                      <p className="text-xs text-[var(--text-muted)]">Your Score</p>
+                    </div>
+                    <div className="w-px h-12 bg-[var(--border-primary)]" />
+                    <div className="text-center">
+                      <p className="text-3xl font-bold">{quizResult.passingScore}%</p>
+                      <p className="text-xs text-[var(--text-muted)]">Passing Score</p>
+                    </div>
+                  </div>
+
+                  {/* Results breakdown */}
+                  <div className="text-left space-y-3 mb-6">
+                    {quiz.questions.map((q, i) => (
+                      <div
+                        key={q.id}
+                        className={`p-3 rounded-lg ${
+                          quizResult.results[i].correct
+                            ? "bg-green-500/10 border border-green-500/20"
+                            : "bg-red-500/10 border border-red-500/20"
+                        }`}
+                      >
+                        <div className="flex items-start gap-2">
+                          <span className={quizResult.results[i].correct ? "text-green-500" : "text-red-500"}>
+                            {quizResult.results[i].correct ? "✓" : "✗"}
+                          </span>
+                          <div>
+                            <p className="font-medium text-sm">{q.question}</p>
+                            <p className="text-xs text-[var(--text-muted)] mt-1">
+                              {quizResult.results[i].explanation}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {quizResult.passed ? (
+                    <p className="text-[var(--success)] text-sm">
+                      Skill verified! Moving to next skill...
+                    </p>
+                  ) : (
+                    <button
+                      onClick={closeQuizAndRetry}
+                      className="w-full py-4 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white rounded-xl font-semibold"
+                    >
+                      Review & Try Again
+                    </button>
+                  )}
+                </div>
+              </>
             )}
           </div>
         </div>
